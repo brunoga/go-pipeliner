@@ -1,0 +1,20 @@
+- pipeline:
+    name: test-pipeline
+    input:
+      - directory:
+          name: home-directories
+          path: /home
+          recursive: true
+      - directory:
+          name: go-home
+          path: /usr/local/go
+          recursive: true
+    filter:
+      - extension:
+          name: go-files
+          extension: .go
+    output:
+      - print:
+          name: stdout
+      - print:
+          name: duplicate-stdout
