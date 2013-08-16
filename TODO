@@ -15,6 +15,10 @@ no particular order):
 - Improve main file so it can be configured via flags (for instance, to set
   config to use). Also add flags to override specific module/pipeline
   configuration whenever it makes sense.
+- Add support for modules to persist data. This could be used, for example, to
+  allow a plugin to only proccess items that are relevant since the last time it
+  ran.
 - Improve code comments.
 - Add tests.
+
 
