@@ -15,7 +15,7 @@ type DirectoryInputModule struct {
 	*base_modules.GenericModule
 
 	outputChannel chan<- interface{}
-	quitChannel   chan interface{}
+	quitChannel   chan struct{}
 
 	path      string
 	recursive bool
@@ -26,7 +26,7 @@ func NewDirectoryInputModule(specificId string) *DirectoryInputModule {
 		base_modules.NewGenericModule("Directory Input Module", "1.0.0",
 			"directory", specificId, "pipeliner-input"),
 		nil,
-		make(chan interface{}),
+		make(chan struct{}),
 		"",
 		false,
 	}
@@ -42,7 +42,7 @@ func (m *DirectoryInputModule) Configure(params *base_modules.ParameterMap) erro
 
 	processedPath, err := filepath.Abs(filepath.Clean(pathParam))
 	if err != nil {
-		return fmt.Errorf("error processing path")
+		return fmt.Errorf("error processing path : %v", err)
 	}
 
 	m.path = processedPath
@@ -110,7 +110,7 @@ func (m *DirectoryInputModule) Start(waitGroup *sync.WaitGroup) error {
 
 func (m *DirectoryInputModule) Stop() {
 	close(m.quitChannel)
-	m.quitChannel = make(chan interface{})
+	m.quitChannel = make(chan struct{})
 }
 
 func (m *DirectoryInputModule) doWork(waitGroup *sync.WaitGroup) {
