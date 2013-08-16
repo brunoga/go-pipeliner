@@ -1,0 +1,20 @@
+
+Some of the things I think should be done in case someone decides to help (in
+no particular order):
+
+- Add usefull logging to Pipeline. This should be done in a way that logs for a
+  given pipeline are generated at the pipeline level itself, not at the module
+  level. This means that modules should broadcast log messages to the pipeline
+  instance (maybe using channels). Levelled logs would be great too and could
+  use https://github.com/golang/glog
+- Improve error reporting (can be done together with the popint above).
+  Currently error messages do not give any indication of which module generated 
+  which error message.
+- Add more modules that can be used to do something usefull.
+- Add configurations that do real work.
+- Improve main file so it can be configured via flags (for instance, to set
+  config to use). Also add flags to override specific module/pipeline
+  configuration whenever it makes sense.
+- Improve code comments.
+- Add tests.
+
