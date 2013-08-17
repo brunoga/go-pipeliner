@@ -2,13 +2,17 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/brunoga/go-pipeliner/config"
 )
 
+var configFile = flag.String("config", "./config.yaml", "path to config file")
+
 func main() {
-	config, err := config.New("./config.yaml")
+	flag.Parse()
+	config, err := config.New(*configFile)
 	if err != nil {
 		fmt.Println(err)
 	} else {
