@@ -5,6 +5,18 @@ Tool for creating automation-related pipelines.
 
 This is a work in progress but the general idea is already here. Do contact me if you are interested on helping.
 
+How to use it.
+--------------
+
+1. Fetch the source code and compile it.
+
+        go get github.com/brunoga/go-pipeliner
+
+2. Edit $GOPATH/src/github.com/brunoga/go-pipeliner/config.yml to configure your pipeline(s).
+3. Run your pipelines.
+
+        $GOPATH/bin/go-pipeliner -config $GOPATH/src/github.com/brunoga/go-pipeliner/config.yml
+
 How to write your module (plugin).
 ----------------------------------
 
