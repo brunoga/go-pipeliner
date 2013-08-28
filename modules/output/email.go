@@ -117,11 +117,12 @@ func (m *EmailOutputModule) GetInputChannel() chan<- interface{} {
 	return m.inputChannel
 }
 
-func (m *EmailOutputModule) Ready() bool {
-	return true
-}
-
 func (m *EmailOutputModule) Start(waitGroup *sync.WaitGroup) error {
+	if !m.Ready() {
+		waitGroup.Done()
+		return fmt.Errorf("not ready")
+	}
+
 	if m.inputChannel == nil {
 		waitGroup.Done()
 		return fmt.Errorf("input channel not connected")
