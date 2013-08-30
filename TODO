@@ -1,4 +1,3 @@
-
 Some of the things I think should be done in case someone decides to help (in
 no particular order):
 
@@ -19,6 +18,7 @@ no particular order):
   allow a plugin to only proccess items that are relevant since the last time it
   ran.
 - Improve code comments.
+- Support connecting one pipeline to another.
 - Add tests.
 
 
