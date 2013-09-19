@@ -159,6 +159,11 @@ func processInputNode(inputNode yaml.Node, pipeline *pipeline.Pipeline) error {
 			return err
 		}
 
+		if module.Type() != "pipeliner-input" {
+			return fmt.Errorf("%s is not a pipeliner input module",
+				module.GenericId())
+		}
+
 		pipeline.AddInputNode(module.(pipeliner_modules.PipelinerInputModule))
 
 		return nil
@@ -172,6 +177,11 @@ func processFilterNode(inputNode yaml.Node, pipeline *pipeline.Pipeline) error {
 			return err
 		}
 
+		if module.Type() != "pipeliner-filter" {
+			return fmt.Errorf("%s is not a pipeliner filter module",
+				module.GenericId())
+		}
+
 		pipeline.AddFilterNode(module.(pipeliner_modules.PipelinerFilterModule))
 
 		return nil
@@ -183,6 +193,11 @@ func processOutputNode(outputNode yaml.Node, pipeline *pipeline.Pipeline) error 
 		module, err := setupModule(node, key)
 		if err != nil {
 			return err
+		}
+
+		if module.Type() != "pipeliner-output" {
+			return fmt.Errorf("%s is not a pipeliner filter module",
+				module.GenericId())
 		}
 
 		pipeline.AddOutputNode(module.(pipeliner_modules.PipelinerOutputModule))
