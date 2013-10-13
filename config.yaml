@@ -16,5 +16,3 @@
     output:
       - print:
           name: stdout
-      - print:
-          name: duplicate-stdout
