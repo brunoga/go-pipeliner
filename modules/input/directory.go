@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/brunoga/go-pipeliner/datatypes"
 
 	base_modules "github.com/brunoga/go-modules"
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
@@ -14,11 +17,16 @@ import (
 type DirectoryInputModule struct {
 	*base_modules.GenericModule
 
-	outputChannel chan<- interface{}
+	outputChannel chan<- *datatypes.PipelineItem
 	quitChannel   chan struct{}
 
 	path      string
 	recursive bool
+}
+
+type internalItem struct {
+	filePath *string
+	fileInfo *os.FileInfo
 }
 
 func NewDirectoryInputModule(specificId string) *DirectoryInputModule {
@@ -83,7 +91,7 @@ func (m *DirectoryInputModule) Duplicate(specificId string) (base_modules.Module
 	return duplicate, nil
 }
 
-func (m *DirectoryInputModule) SetOutputChannel(outputChannel chan<- interface{}) error {
+func (m *DirectoryInputModule) SetOutputChannel(outputChannel chan<- *datatypes.PipelineItem) error {
 	if outputChannel == nil {
 		return fmt.Errorf("can't set output to a nil channel")
 	}
@@ -115,7 +123,7 @@ func (m *DirectoryInputModule) Stop() {
 
 func (m *DirectoryInputModule) doWork(waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
-	itemChannel := make(chan interface{})
+	itemChannel := make(chan *internalItem)
 	itemControlChannel := make(chan struct{})
 	go setupReadDirectory(m.path, m.recursive, itemChannel, itemControlChannel)
 
@@ -124,7 +132,18 @@ L:
 		select {
 		case item, ok := <-itemChannel:
 			if ok {
-				m.outputChannel <- item
+				fileUrl, err := url.Parse("file:///" + filepath.Join(
+					*item.filePath, (*item.fileInfo).Name()))
+				if err != nil {
+					// TODO(bga): Log error.
+					continue
+				}
+
+				pipelineItem := datatypes.NewPipelineItem(m.GenericId())
+				_ = pipelineItem.AddUrl(fileUrl)
+				pipelineItem.SetName(fileUrl.Path)
+				pipelineItem.AddPayload("directory", item.fileInfo)
+				m.outputChannel <- pipelineItem
 			} else {
 				close(m.outputChannel)
 				break L
@@ -136,13 +155,13 @@ L:
 	}
 }
 
-func setupReadDirectory(path string, recursive bool, itemChannel chan<- interface{},
-	itemControlChannel <-chan struct{}) {
+func setupReadDirectory(path string, recursive bool,
+	itemChannel chan<- *internalItem, itemControlChannel <-chan struct{}) {
 	defer close(itemChannel)
 	readDirectory(path, recursive, itemChannel, itemControlChannel)
 }
 
-func readDirectory(path string, recursive bool, itemChannel chan<- interface{},
+func readDirectory(path string, recursive bool, itemChannel chan<- *internalItem,
 	itemControlChannel <-chan struct{}) {
 	fileInfos, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -155,18 +174,12 @@ L:
 			readDirectory(filepath.Join(path,
 				file.Name()), true, itemChannel, itemControlChannel)
 		} else if !file.IsDir() {
-			fileUrl, err := url.Parse("file:///" + filepath.Join(
-				path, file.Name()))
-			if err != nil {
-				return
-			}
-
 			select {
 			case _, ok := <-itemControlChannel:
 				if !ok {
 					break L
 				}
-			case itemChannel <- fileUrl:
+			case itemChannel <- &internalItem{&path, &file}:
 				// Do nothing.
 			}
 		}

@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/brunoga/go-pipeliner/datatypes"
+
 	base_modules "github.com/brunoga/go-modules"
 )
 
 type multiplexerModule struct {
 	*base_modules.GenericModule
 
-	inputChannels []<-chan interface{}
-	outputChannel chan<- interface{}
+	inputChannels []<-chan *datatypes.PipelineItem
+	outputChannel chan<- *datatypes.PipelineItem
 	quitChannel   chan struct{}
 }
 
@@ -25,13 +27,13 @@ func newMultiplexerModule(specificId string) *multiplexerModule {
 	}
 }
 
-func (m *multiplexerModule) GetInputChannel() chan<- interface{} {
-	inputChannel := make(chan interface{})
+func (m *multiplexerModule) GetInputChannel() chan<- *datatypes.PipelineItem {
+	inputChannel := make(chan *datatypes.PipelineItem)
 	m.inputChannels = append(m.inputChannels, inputChannel)
 	return inputChannel
 }
 
-func (m *multiplexerModule) SetOutputChannel(outputChannel chan<- interface{}) error {
+func (m *multiplexerModule) SetOutputChannel(outputChannel chan<- *datatypes.PipelineItem) error {
 	if outputChannel == nil {
 		return fmt.Errorf("can´t use nil channel as output")
 	}
@@ -84,7 +86,8 @@ func (m *multiplexerModule) doWork(waitGroup *sync.WaitGroup) {
 	close(m.outputChannel)
 }
 
-func inputHandler(inputChannel <-chan interface{}, outputChannel chan<- interface{},
+func inputHandler(inputChannel <-chan *datatypes.PipelineItem,
+	outputChannel chan<- *datatypes.PipelineItem,
 	quitChannel chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 L:

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/brunoga/go-pipeliner/datatypes"
+
 	base_modules "github.com/brunoga/go-modules"
 )
 
@@ -16,11 +18,11 @@ type Stopper interface {
 }
 
 type InputChannelGetter interface {
-	GetInputChannel() chan<- interface{}
+	GetInputChannel() chan<- *datatypes.PipelineItem
 }
 
 type OutputChannelSetter interface {
-	SetOutputChannel(chan<- interface{}) error
+	SetOutputChannel(chan<- *datatypes.PipelineItem) error
 }
 
 type InputNode interface {

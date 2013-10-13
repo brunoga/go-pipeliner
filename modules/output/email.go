@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/brunoga/go-pipeliner/datatypes"
+
 	base_modules "github.com/brunoga/go-modules"
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 )
@@ -13,7 +15,7 @@ import (
 type EmailOutputModule struct {
 	*base_modules.GenericModule
 
-	inputChannel chan interface{}
+	inputChannel chan *datatypes.PipelineItem
 	quitChannel  chan struct{}
 
 	authUser     string
@@ -23,14 +25,14 @@ type EmailOutputModule struct {
 	to           string
 	subject      string
 
-	emailItems []interface{}
+	emailItems []*datatypes.PipelineItem
 }
 
 func NewEmailOutputModule(specificId string) *EmailOutputModule {
 	return &EmailOutputModule{
 		base_modules.NewGenericModule("E-Mail Output Module", "1.0.0",
 			"email", specificId, "pipeliner-output"),
-		make(chan interface{}),
+		make(chan *datatypes.PipelineItem),
 		make(chan struct{}),
 		"",
 		"",
@@ -113,7 +115,7 @@ func (m *EmailOutputModule) Duplicate(specificId string) (base_modules.Module, e
 	return duplicate, nil
 }
 
-func (m *EmailOutputModule) GetInputChannel() chan<- interface{} {
+func (m *EmailOutputModule) GetInputChannel() chan<- *datatypes.PipelineItem {
 	return m.inputChannel
 }
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/brunoga/go-pipeliner/datatypes"
+
 	base_modules "github.com/brunoga/go-modules"
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 )
@@ -11,16 +13,16 @@ import (
 type PrintOutputModule struct {
 	*base_modules.GenericModule
 
-	inputChannel chan interface{}
-	quitChannel  chan interface{}
+	inputChannel chan *datatypes.PipelineItem
+	quitChannel  chan struct{}
 }
 
 func NewPrintOutputModule(specificId string) *PrintOutputModule {
 	return &PrintOutputModule{
 		base_modules.NewGenericModule("Print Output Module", "1.0.0",
 			"print", specificId, "pipeliner-output"),
-		make(chan interface{}),
-		make(chan interface{}),
+		make(chan *datatypes.PipelineItem),
+		make(chan struct{}),
 	}
 }
 
@@ -34,7 +36,7 @@ func (m *PrintOutputModule) Duplicate(specificId string) (base_modules.Module, e
 	return duplicate, nil
 }
 
-func (m *PrintOutputModule) GetInputChannel() chan<- interface{} {
+func (m *PrintOutputModule) GetInputChannel() chan<- *datatypes.PipelineItem {
 	return m.inputChannel
 }
 
@@ -55,7 +57,7 @@ func (m *PrintOutputModule) Start(waitGroup *sync.WaitGroup) error {
 
 func (m *PrintOutputModule) Stop() {
 	close(m.quitChannel)
-	m.quitChannel = make(chan interface{})
+	m.quitChannel = make(chan struct{})
 }
 
 func (m *PrintOutputModule) doWork(waitGroup *sync.WaitGroup) {

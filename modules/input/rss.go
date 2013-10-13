@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/brunoga/go-pipeliner/datatypes"
+
 	base_modules "github.com/brunoga/go-modules"
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 	rss "github.com/jteeuwen/go-pkg-rss"
@@ -13,7 +15,7 @@ import (
 type RssInputModule struct {
 	*base_modules.GenericModule
 
-	outputChannel chan<- interface{}
+	outputChannel chan<- *datatypes.PipelineItem
 	quitChannel   chan struct{}
 
 	rssUrl *url.URL
@@ -65,7 +67,7 @@ func (m *RssInputModule) Duplicate(specificId string) (base_modules.Module, erro
 	return duplicate, nil
 }
 
-func (m *RssInputModule) SetOutputChannel(outputChannel chan<- interface{}) error {
+func (m *RssInputModule) SetOutputChannel(outputChannel chan<- *datatypes.PipelineItem) error {
 	if outputChannel == nil {
 		return fmt.Errorf("can't set output to a nil channel")
 	}
@@ -97,7 +99,7 @@ func (m *RssInputModule) Stop() {
 
 func (m *RssInputModule) doWork(waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
-	itemChannel := make(chan interface{})
+	itemChannel := make(chan *rss.Item)
 	itemControlChannel := make(chan struct{})
 	go setupReadRss(m.rssUrl, itemChannel, itemControlChannel)
 
@@ -106,7 +108,17 @@ L:
 		select {
 		case item, ok := <-itemChannel:
 			if ok {
-				m.outputChannel <- item
+				pipelineItem := datatypes.NewPipelineItem(m.GenericId())
+				pipelineItem.SetName(item.Title)
+				for _, itemUrl := range item.Links {
+					_, err := pipelineItem.AddUrlString(itemUrl.Href)
+					if err != nil {
+						// TODO(bga): Log error.
+						continue
+					}
+				}
+				pipelineItem.AddPayload("rss", item)
+				m.outputChannel <- pipelineItem
 			} else {
 				close(m.outputChannel)
 				break L
@@ -118,13 +130,13 @@ L:
 	}
 }
 
-func setupReadRss(rssUrl *url.URL, itemChannel chan<- interface{},
+func setupReadRss(rssUrl *url.URL, itemChannel chan<- *rss.Item,
 	itemControlChannel <-chan struct{}) {
 	defer close(itemChannel)
 	readRss(rssUrl, itemChannel, itemControlChannel)
 }
 
-func readRss(rssUrl *url.URL, itemChannel chan<- interface{},
+func readRss(rssUrl *url.URL, itemChannel chan<- *rss.Item,
 	itemControlChannel <-chan struct{}) {
 	feed := rss.New(5, true, nil, func(feed *rss.Feed, ch *rss.Channel, newItems []*rss.Item) {
 	L:
@@ -134,7 +146,7 @@ func readRss(rssUrl *url.URL, itemChannel chan<- interface{},
 				if !ok {
 					break L
 				}
-			case itemChannel <- item.Links[0].Href:
+			case itemChannel <- item:
 				// Do nothing.
 			}
 		}
