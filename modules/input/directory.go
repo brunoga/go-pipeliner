@@ -25,8 +25,8 @@ type DirectoryInputModule struct {
 }
 
 type internalItem struct {
-	filePath *string
-	fileInfo *os.FileInfo
+	filePath string
+	fileInfo os.FileInfo
 }
 
 func NewDirectoryInputModule(specificId string) *DirectoryInputModule {
@@ -132,8 +132,8 @@ L:
 		select {
 		case item, ok := <-itemChannel:
 			if ok {
-				fileUrl, err := url.Parse("file:///" + filepath.Join(
-					*item.filePath, (*item.fileInfo).Name()))
+				fileUrl, err := url.Parse("file://" + filepath.Join(
+					item.filePath, item.fileInfo.Name()))
 				if err != nil {
 					// TODO(bga): Log error.
 					continue
@@ -179,7 +179,7 @@ L:
 				if !ok {
 					break L
 				}
-			case itemChannel <- &internalItem{&path, &file}:
+			case itemChannel <- &internalItem{path, file}:
 				// Do nothing.
 			}
 		}
