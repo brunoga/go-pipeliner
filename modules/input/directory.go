@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
-	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
 
@@ -15,32 +13,28 @@ import (
 )
 
 type DirectoryInputModule struct {
-	*base_modules.GenericModule
-
-	outputChannel chan<- *datatypes.PipelineItem
-	quitChannel   chan struct{}
+	*pipeliner_modules.GenericInputModule
 
 	path      string
 	recursive bool
 }
 
-type internalItem struct {
-	filePath string
-	fileInfo os.FileInfo
-}
-
 func NewDirectoryInputModule(specificId string) *DirectoryInputModule {
-	return &DirectoryInputModule{
-		base_modules.NewGenericModule("Directory Input Module", "1.0.0",
-			"directory", specificId, "pipeliner-input"),
-		nil,
-		make(chan struct{}),
+	directoryInputModule := &DirectoryInputModule{
+		pipeliner_modules.NewGenericInputModule(
+			"Directory Input Module", "1.0.0",
+			"directory", specificId, nil),
 		"",
 		false,
 	}
+	directoryInputModule.SetGeneratorFunc(
+		directoryInputModule.setupReadDirectory)
+
+	return directoryInputModule
 }
 
-func (m *DirectoryInputModule) Configure(params *base_modules.ParameterMap) error {
+func (m *DirectoryInputModule) Configure(
+	params *base_modules.ParameterMap) error {
 	var ok bool
 
 	pathParam, ok := (*params)["path"]
@@ -81,7 +75,8 @@ func (m *DirectoryInputModule) Parameters() *base_modules.ParameterMap {
 	}
 }
 
-func (m *DirectoryInputModule) Duplicate(specificId string) (base_modules.Module, error) {
+func (m *DirectoryInputModule) Duplicate(
+	specificId string) (base_modules.Module, error) {
 	duplicate := NewDirectoryInputModule(specificId)
 	err := pipeliner_modules.RegisterPipelinerInputModule(duplicate)
 	if err != nil {
@@ -91,95 +86,49 @@ func (m *DirectoryInputModule) Duplicate(specificId string) (base_modules.Module
 	return duplicate, nil
 }
 
-func (m *DirectoryInputModule) SetOutputChannel(outputChannel chan<- *datatypes.PipelineItem) error {
-	if outputChannel == nil {
-		return fmt.Errorf("can't set output to a nil channel")
-	}
+func (m *DirectoryInputModule) setupReadDirectory(
+	generatorChannel chan<- *datatypes.PipelineItem,
+	generatorControlChannel <-chan struct{}) {
+	defer close(generatorChannel)
 
-	m.outputChannel = outputChannel
-	return nil
+	readDirectory(m.GenericId(), m.path, m.recursive, generatorChannel,
+		generatorControlChannel)
 }
 
-func (m *DirectoryInputModule) Start(waitGroup *sync.WaitGroup) error {
-	if !m.Ready() {
-		waitGroup.Done()
-		return fmt.Errorf("not ready")
-	}
-
-	if m.outputChannel == nil {
-		waitGroup.Done()
-		return fmt.Errorf("output channel not connected")
-	}
-
-	go m.doWork(waitGroup)
-
-	return nil
-}
-
-func (m *DirectoryInputModule) Stop() {
-	close(m.quitChannel)
-	m.quitChannel = make(chan struct{})
-}
-
-func (m *DirectoryInputModule) doWork(waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
-	itemChannel := make(chan *internalItem)
-	itemControlChannel := make(chan struct{})
-	go setupReadDirectory(m.path, m.recursive, itemChannel, itemControlChannel)
-
-L:
-	for {
-		select {
-		case item, ok := <-itemChannel:
-			if ok {
-				fileUrl, err := url.Parse("file://" + filepath.Join(
-					item.filePath, item.fileInfo.Name()))
-				if err != nil {
-					// TODO(bga): Log error.
-					continue
-				}
-
-				pipelineItem := datatypes.NewPipelineItem(m.GenericId())
-				_ = pipelineItem.AddUrl(fileUrl)
-				pipelineItem.SetName(fileUrl.Path)
-				pipelineItem.AddPayload("directory", item.fileInfo)
-				m.outputChannel <- pipelineItem
-			} else {
-				close(m.outputChannel)
-				break L
-			}
-		case <-m.quitChannel:
-			close(itemControlChannel)
-			break L
-		}
-	}
-}
-
-func setupReadDirectory(path string, recursive bool,
-	itemChannel chan<- *internalItem, itemControlChannel <-chan struct{}) {
-	defer close(itemChannel)
-	readDirectory(path, recursive, itemChannel, itemControlChannel)
-}
-
-func readDirectory(path string, recursive bool, itemChannel chan<- *internalItem,
-	itemControlChannel <-chan struct{}) {
+func readDirectory(genericId, path string, recursive bool,
+	generatorChannel chan<- *datatypes.PipelineItem,
+	generatorControlChannel <-chan struct{}) {
 	fileInfos, err := ioutil.ReadDir(path)
 	if err != nil {
+		// TODO(bga): Log error.
 		return
 	}
 
 L:
 	for _, file := range fileInfos {
 		if file.IsDir() && recursive {
-			readDirectory(filepath.Join(path,
-				file.Name()), true, itemChannel, itemControlChannel)
+			readDirectory(genericId, filepath.Join(path,
+				file.Name()), true, generatorChannel,
+				generatorControlChannel)
 		} else if !file.IsDir() {
+			fileUrl, err := url.Parse("file://" + filepath.Join(
+				path, file.Name()))
+			if err != nil {
+				// TODO(bga): Log error.
+				continue;
+			}
+
+			pipelineItem := datatypes.NewPipelineItem(genericId)
+			_ = pipelineItem.AddUrl(fileUrl)
+			pipelineItem.SetName(fileUrl.Path)
+			pipelineItem.AddPayload("directory", file)
+
 			select {
-			case _, ok := <-itemControlChannel:
+			case _, ok := <-generatorControlChannel:
 				if !ok {
 					break L
 				}
-			case itemChannel <- &internalItem{path, file}:
+			case generatorChannel <- pipelineItem:
 				// Do nothing.
 			}
 		}
@@ -187,5 +136,6 @@ L:
 }
 
 func init() {
-	pipeliner_modules.RegisterPipelinerInputModule(NewDirectoryInputModule(""))
+	pipeliner_modules.RegisterPipelinerInputModule(
+		NewDirectoryInputModule(""))
 }
