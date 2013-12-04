@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/smtp"
 	"strings"
+	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
 
@@ -12,7 +13,10 @@ import (
 )
 
 type EmailOutputModule struct {
-	*pipeliner_modules.GenericOutputModule
+	*base_modules.GenericModule
+
+	inputChannel chan *datatypes.PipelineItem
+	quitChannel  chan struct{}
 
 	authUser     string
 	authPassword string
@@ -25,9 +29,11 @@ type EmailOutputModule struct {
 }
 
 func NewEmailOutputModule(specificId string) *EmailOutputModule {
-	emailOutputModule := &EmailOutputModule{
-		pipeliner_modules.NewGenericOutputModule("E-Mail Output Module",
-			"1.0.0", "email", specificId, nil),
+	return &EmailOutputModule{
+		base_modules.NewGenericModule("E-Mail Output Module", "1.0.0",
+			"email", specificId, "pipeliner-output"),
+		make(chan *datatypes.PipelineItem),
+		make(chan struct{}),
 		"",
 		"",
 		"",
@@ -36,9 +42,6 @@ func NewEmailOutputModule(specificId string) *EmailOutputModule {
 		"",
 		nil,
 	}
-	emailOutputModule.SetConsumerFunc(emailOutputModule.blah)
-
-	return emailOutputModule
 }
 
 func (m *EmailOutputModule) Configure(params *base_modules.ParameterMap) error {
@@ -102,8 +105,7 @@ func (m *EmailOutputModule) Parameters() *base_modules.ParameterMap {
 	}
 }
 
-func (m *EmailOutputModule) Duplicate(specificId string) (base_modules.Module,
-	error) {
+func (m *EmailOutputModule) Duplicate(specificId string) (base_modules.Module, error) {
 	duplicate := NewEmailOutputModule(specificId)
 	err := pipeliner_modules.RegisterPipelinerOutputModule(duplicate)
 	if err != nil {
@@ -113,9 +115,11 @@ func (m *EmailOutputModule) Duplicate(specificId string) (base_modules.Module,
 	return duplicate, nil
 }
 
+func (m *EmailOutputModule) GetInputChannel() chan<- *datatypes.PipelineItem {
+	return m.inputChannel
+}
+
 func (m *EmailOutputModule) Start(waitGroup *sync.WaitGroup) error {
-	// We have to keep this here because we need a custom doWork().
-	// TODO(bga): Fix this.
 	if !m.Ready() {
 		waitGroup.Done()
 		return fmt.Errorf("not ready")
@@ -131,10 +135,12 @@ func (m *EmailOutputModule) Start(waitGroup *sync.WaitGroup) error {
 	return nil
 }
 
+func (m *EmailOutputModule) Stop() {
+	close(m.quitChannel)
+	m.quitChannel = make(chan struct{})
+}
+
 func (m *EmailOutputModule) doWork(waitGroup *sync.WaitGroup) {
-	// We have to keep this here because we need to able to send an email
-	// after all items are processed.
-	// TODO(bga): Fix this.
 	defer waitGroup.Done()
 L:
 	for {
@@ -160,6 +166,5 @@ L:
 }
 
 func init() {
-	pipeliner_modules.RegisterPipelinerOutputModule(
-		NewEmailOutputModule(""))
+	pipeliner_modules.RegisterPipelinerOutputModule(NewEmailOutputModule(""))
 }
