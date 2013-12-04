@@ -19,7 +19,6 @@ type PipelineItem struct {
 	payload PayloadMap
 }
 
-
 // NewPipelineItem creates a new item with the given inputGenericId (i.e. the
 // generic id of the plugin that inserted it in the pipeline). The returned
 // PipelineItem has all fields initialized with default values.

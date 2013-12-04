@@ -115,7 +115,7 @@ L:
 				path, file.Name()))
 			if err != nil {
 				// TODO(bga): Log error.
-				continue;
+				continue
 			}
 
 			pipelineItem := datatypes.NewPipelineItem(genericId)

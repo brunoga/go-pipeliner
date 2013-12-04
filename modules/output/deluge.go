@@ -6,8 +6,8 @@ import (
 
 	"github.com/brunoga/go-pipeliner/datatypes"
 
-	base_modules "github.com/brunoga/go-modules"
 	deluge "github.com/brunoga/go-deluge"
+	base_modules "github.com/brunoga/go-modules"
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 )
 
@@ -55,11 +55,10 @@ func (m *DelugeOutputModule) Configure(params *base_modules.ParameterMap) error 
 
 func (m *DelugeOutputModule) Parameters() *base_modules.ParameterMap {
 	return &base_modules.ParameterMap{
-		"server": "",
+		"server":   "",
 		"password": "",
 	}
 }
-
 
 func (m *DelugeOutputModule) Duplicate(specificId string) (base_modules.Module, error) {
 	duplicate := NewDelugeOutputModule(specificId)
@@ -143,4 +142,3 @@ func (m *DelugeOutputModule) sendToDeluge(item *datatypes.PipelineItem) {
 func init() {
 	pipeliner_modules.RegisterPipelinerOutputModule(NewDelugeOutputModule(""))
 }
-
