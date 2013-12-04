@@ -15,12 +15,11 @@ type GenericOutputModule struct {
 	inputChannel chan *datatypes.PipelineItem
 	quitChannel  chan struct{}
 
-	consumerFunc func(<-chan *datatypes.PipelineItem, <-chan struct{})
+	consumerFunc func(*datatypes.PipelineItem) bool
 }
 
 func NewGenericOutputModule(name, version, genericId, specificId string,
-	consumerFunc func(<-chan *datatypes.PipelineItem,
-		<-chan struct{})) *GenericOutputModule {
+	consumerFunc func(*datatypes.PipelineItem) bool) *GenericOutputModule {
 	return &GenericOutputModule{
 		base_modules.NewGenericModule(name, version, genericId,
 			specificId, "pipeliner-output"),
@@ -30,7 +29,8 @@ func NewGenericOutputModule(name, version, genericId, specificId string,
 	}
 }
 
-func (m *GenericOutputModule) Duplicate(specificId string) (base_modules.Module, error) {
+func (m *GenericOutputModule) Duplicate(specificId string) (base_modules.Module,
+	error) {
 	return nil, fmt.Errorf("generic output module can not be duplicated")
 }
 
@@ -55,7 +55,7 @@ func (m *GenericOutputModule) Stop() {
 }
 
 func (m *GenericOutputModule) SetConsumerFunc(
-	consumerFunc func(<-chan *datatypes.PipelineItem, <-chan struct{})) {
+	consumerFunc func(*datatypes.PipelineItem) bool) {
 	m.consumerFunc = consumerFunc
 }
 
@@ -64,7 +64,7 @@ func (m *GenericOutputModule) doWork(waitGroup *sync.WaitGroup) {
 	consumerChannel := make(chan *datatypes.PipelineItem)
 	consumerControlChannel := make(chan struct{})
 
-	go m.consumerFunc(consumerChannel, consumerControlChannel)
+	go m.itemHandler(consumerChannel, consumerControlChannel)
 L:
 	for {
 		select {
@@ -82,3 +82,22 @@ L:
 		}
 	}
 }
+
+func (m *GenericOutputModule) itemHandler(
+	consumerChannel <-chan *datatypes.PipelineItem,
+        consumerControlChannel <-chan struct{}) {
+L:
+	for {
+		select {
+		case _, ok := <-consumerControlChannel:
+			if !ok {
+				break L
+			}
+		case pipelineItem := <-consumerChannel:
+			// TODO(bga): We might do something with the returned
+			//boolean.
+			_ = m.consumerFunc(pipelineItem)
+		}
+	}
+}
+
