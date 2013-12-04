@@ -40,20 +40,10 @@ func (m *PrintOutputModule) Ready() bool {
 }
 
 func (m *PrintOutputModule) printItem(
-	consumerChannel <-chan *datatypes.PipelineItem,
-	consumerControlChannel <-chan struct{}) {
+	pipelineItem *datatypes.PipelineItem) bool {
+	fmt.Println(pipelineItem)
 
-L:
-	for {
-		select {
-		case _, ok := <-consumerControlChannel:
-			if !ok {
-				break L
-			}
-		case pipelineItem := <-consumerChannel:
-			fmt.Println(pipelineItem)
-		}
-	}
+	return true
 }
 
 func init() {
