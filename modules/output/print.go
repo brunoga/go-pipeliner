@@ -2,7 +2,6 @@ package input
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
 
@@ -11,22 +10,21 @@ import (
 )
 
 type PrintOutputModule struct {
-	*base_modules.GenericModule
-
-	inputChannel chan *datatypes.PipelineItem
-	quitChannel  chan struct{}
+	*pipeliner_modules.GenericOutputModule
 }
 
 func NewPrintOutputModule(specificId string) *PrintOutputModule {
-	return &PrintOutputModule{
-		base_modules.NewGenericModule("Print Output Module", "1.0.0",
-			"print", specificId, "pipeliner-output"),
-		make(chan *datatypes.PipelineItem),
-		make(chan struct{}),
+	printOutputModule := &PrintOutputModule{
+		pipeliner_modules.NewGenericOutputModule("Print Output Module",
+			"1.0.0", "print", specificId, nil),
 	}
+	printOutputModule.SetConsumerFunc(printOutputModule.printItem)
+
+	return printOutputModule
 }
 
-func (m *PrintOutputModule) Duplicate(specificId string) (base_modules.Module, error) {
+func (m *PrintOutputModule) Duplicate(specificId string) (base_modules.Module,
+	error) {
 	duplicate := NewPrintOutputModule(specificId)
 	err := pipeliner_modules.RegisterPipelinerOutputModule(duplicate)
 	if err != nil {
@@ -36,48 +34,29 @@ func (m *PrintOutputModule) Duplicate(specificId string) (base_modules.Module, e
 	return duplicate, nil
 }
 
-func (m *PrintOutputModule) GetInputChannel() chan<- *datatypes.PipelineItem {
-	return m.inputChannel
-}
-
 func (m *PrintOutputModule) Ready() bool {
+	// There is no configuration, so we are always ready.
 	return true
 }
 
-func (m *PrintOutputModule) Start(waitGroup *sync.WaitGroup) error {
-	if m.inputChannel == nil {
-		waitGroup.Done()
-		return fmt.Errorf("input channel not connected")
-	}
+func (m *PrintOutputModule) printItem(
+	consumerChannel <-chan *datatypes.PipelineItem,
+	consumerControlChannel <-chan struct{}) {
 
-	go m.doWork(waitGroup)
-
-	return nil
-}
-
-func (m *PrintOutputModule) Stop() {
-	close(m.quitChannel)
-	m.quitChannel = make(chan struct{})
-}
-
-func (m *PrintOutputModule) doWork(waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
 L:
 	for {
 		select {
-		case item, ok := <-m.inputChannel:
-			if ok {
-				fmt.Println(item)
-			} else {
-				m.inputChannel = nil
+		case _, ok := <-consumerControlChannel:
+			if !ok {
 				break L
 			}
-		case <-m.quitChannel:
-			break L
+		case pipelineItem := <-consumerChannel:
+			fmt.Println(pipelineItem)
 		}
 	}
 }
 
 func init() {
-	pipeliner_modules.RegisterPipelinerOutputModule(NewPrintOutputModule(""))
+	pipeliner_modules.RegisterPipelinerOutputModule(
+		NewPrintOutputModule(""))
 }
