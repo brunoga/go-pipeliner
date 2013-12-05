@@ -1,0 +1,26 @@
+# This pipeline gets the main feed from Ars Technica
+# (http://www.arstechnica.com) and mails it to the configured email address. To
+# use it you need to uncomment the configuration options below and set the
+# correct data for your email and email server.
+#
+# Usage:
+# 
+# go-pipeliner -config=[path to file]/ars-technica-feed-mailer.yaml
+#
+# Replace [path to file] with the path to this file.
+- pipeline:
+    name: ars-technica-feed-mailer
+    input:
+      - rss:
+          name: ars-technica-feed
+          url: http://feeds.arstechnica.com/arstechnica/index?format=xml
+    output:
+      - email:
+          name: email-to-myself
+#          auth_user: [login]
+#          auth_password: [password]
+#          smtp_server: [emailserver:port]
+#          from: [emailfrom]
+#          to: [emailto]
+          subject: Ars Technica Main Feed
+
