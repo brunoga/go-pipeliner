@@ -2,6 +2,7 @@ package input
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
 
@@ -40,7 +41,9 @@ func (m *PrintOutputModule) Ready() bool {
 }
 
 func (m *PrintOutputModule) printItem(
-	consumerChannel <-chan *datatypes.PipelineItem) {
+	consumerChannel <-chan *datatypes.PipelineItem,
+	waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
 	// Read channel until it is closed by the other end and print the
 	// received pipeline items.
 	for pipelineItem := range consumerChannel {

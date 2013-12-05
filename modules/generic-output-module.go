@@ -15,12 +15,12 @@ type GenericOutputModule struct {
 	inputChannel chan *datatypes.PipelineItem
 	quitChannel  chan struct{}
 
-	consumerFunc func(<-chan *datatypes.PipelineItem)
+	consumerFunc func(<-chan *datatypes.PipelineItem, *sync.WaitGroup)
 }
 
 func NewGenericOutputModule(name, version, genericId, specificId string,
-	consumerFunc func(
-		<-chan *datatypes.PipelineItem)) *GenericOutputModule {
+	consumerFunc func(<-chan *datatypes.PipelineItem,
+		*sync.WaitGroup)) *GenericOutputModule {
 	return &GenericOutputModule{
 		base_modules.NewGenericModule(name, version, genericId,
 			specificId, "pipeliner-output"),
@@ -56,15 +56,14 @@ func (m *GenericOutputModule) Stop() {
 }
 
 func (m *GenericOutputModule) SetConsumerFunc(
-	consumerFunc func(<-chan *datatypes.PipelineItem)) {
+	consumerFunc func(<-chan *datatypes.PipelineItem, *sync.WaitGroup)) {
 	m.consumerFunc = consumerFunc
 }
 
 func (m *GenericOutputModule) doWork(waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
 	consumerChannel := make(chan *datatypes.PipelineItem)
 
-	go m.consumerFunc(consumerChannel)
+	go m.consumerFunc(consumerChannel, waitGroup)
 L:
 	for {
 		select {

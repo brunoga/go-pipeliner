@@ -2,6 +2,7 @@ package input
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
 
@@ -70,7 +71,9 @@ func (m *DelugeOutputModule) Duplicate(specificId string) (base_modules.Module,
 }
 
 func (m *DelugeOutputModule) sendItemToDeluge(
-	consumerChannel <-chan *datatypes.PipelineItem) {
+	consumerChannel <-chan *datatypes.PipelineItem,
+	waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
 	for pipelineItem := range consumerChannel {
 		// Use first URL available.
 		// TODO(bga): Allow user to define preferred hosts or URL types 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/smtp"
 	"strings"
+	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
 
@@ -110,7 +111,9 @@ func (m *EmailOutputModule) Duplicate(specificId string) (base_modules.Module, e
 }
 
 func (m *EmailOutputModule) sendEmail(
-	consumerChannel <-chan *datatypes.PipelineItem) {
+	consumerChannel <-chan *datatypes.PipelineItem,
+	waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
 	// Setup body.
 	body := "To: " + m.to + "\r\nSubject: " + m.subject + "\r\n\r\n"
 
@@ -134,4 +137,3 @@ func init() {
 	pipeliner_modules.RegisterPipelinerOutputModule(
 		NewEmailOutputModule(""))
 }
-
