@@ -95,7 +95,7 @@ L:
 			}
 		case pipelineItem := <-consumerChannel:
 			// TODO(bga): We might do something with the returned
-			//boolean.
+			// boolean.
 			_ = m.consumerFunc(pipelineItem)
 		}
 	}
