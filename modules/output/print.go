@@ -40,10 +40,12 @@ func (m *PrintOutputModule) Ready() bool {
 }
 
 func (m *PrintOutputModule) printItem(
-	pipelineItem *datatypes.PipelineItem) bool {
-	fmt.Println(pipelineItem)
-
-	return true
+	consumerChannel <-chan *datatypes.PipelineItem) {
+	// Read channel until it is closed by the other end and print the
+	// received pipeline items.
+	for pipelineItem := range consumerChannel {
+		fmt.Println(pipelineItem)
+	}
 }
 
 func init() {

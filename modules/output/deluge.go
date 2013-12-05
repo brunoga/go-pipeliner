@@ -70,33 +70,33 @@ func (m *DelugeOutputModule) Duplicate(specificId string) (base_modules.Module,
 }
 
 func (m *DelugeOutputModule) sendItemToDeluge(
-	item *datatypes.PipelineItem) bool {
-	// Use first URL available.
-	// TODO(bga): Allow user to define preferred hosts or URL types (e.g.
-	// prefer magnet links).
-	torrentUrl, err := item.GetUrl(0)
-	if err != nil {
-		// TODO(bga): Log error.
-		return false
+	consumerChannel <-chan *datatypes.PipelineItem) {
+	for pipelineItem := range consumerChannel {
+		// Use first URL available.
+		// TODO(bga): Allow user to define preferred hosts or URL types 
+		// (e.g. prefer magnet links).
+		torrentUrl, err := pipelineItem.GetUrl(0)
+		if err != nil {
+			// TODO(bga): Log error.
+			continue
+		}
+
+		// TODO(bga): Empty configuration for now.
+		options := map[string]interface{}{}
+
+		// TODO(bga): Handle errors when addding torrent.
+		switch torrentUrl.Scheme {
+		case "magnet":
+			m.delugeClient.CoreAddTorrentMagnet(
+				torrentUrl.String(), options)
+		case "http":
+			m.delugeClient.CoreAddTorrentUrl(
+				torrentUrl.String(), options)
+		default:
+			// TODO(bga): Add handling of other types.
+			continue
+		}
 	}
-
-	// TODO(bga): Empty configuration for now.
-	options := map[string]interface{}{}
-
-	// TODO(bga): Handle errors when addding torrent.
-	switch torrentUrl.Scheme {
-	case "magnet":
-		m.delugeClient.CoreAddTorrentMagnet(
-			torrentUrl.String(), options)
-	case "http":
-		m.delugeClient.CoreAddTorrentUrl(
-			torrentUrl.String(), options)
-	default:
-		// TODO(bga): Add handling of other types.
-		return false
-	}
-
-	return true
 }
 
 func init() {

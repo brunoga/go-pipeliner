@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/smtp"
 	"strings"
-	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
 
@@ -13,10 +12,7 @@ import (
 )
 
 type EmailOutputModule struct {
-	*base_modules.GenericModule
-
-	inputChannel chan *datatypes.PipelineItem
-	quitChannel  chan struct{}
+	*pipeliner_modules.GenericOutputModule
 
 	authUser     string
 	authPassword string
@@ -24,24 +20,22 @@ type EmailOutputModule struct {
 	from         string
 	to           string
 	subject      string
-
-	emailItems []*datatypes.PipelineItem
 }
 
 func NewEmailOutputModule(specificId string) *EmailOutputModule {
-	return &EmailOutputModule{
-		base_modules.NewGenericModule("E-Mail Output Module", "1.0.0",
-			"email", specificId, "pipeliner-output"),
-		make(chan *datatypes.PipelineItem),
-		make(chan struct{}),
+	emailOutputModule := &EmailOutputModule{
+		pipeliner_modules.NewGenericOutputModule("E-Mail Output Module",
+			"1.0.0", "email", specificId, nil),
 		"",
 		"",
 		"",
 		"",
 		"",
 		"",
-		nil,
 	}
+	emailOutputModule.SetConsumerFunc(emailOutputModule.sendEmail)
+
+	return emailOutputModule
 }
 
 func (m *EmailOutputModule) Configure(params *base_modules.ParameterMap) error {
@@ -115,56 +109,29 @@ func (m *EmailOutputModule) Duplicate(specificId string) (base_modules.Module, e
 	return duplicate, nil
 }
 
-func (m *EmailOutputModule) GetInputChannel() chan<- *datatypes.PipelineItem {
-	return m.inputChannel
-}
-
-func (m *EmailOutputModule) Start(waitGroup *sync.WaitGroup) error {
-	if !m.Ready() {
-		waitGroup.Done()
-		return fmt.Errorf("not ready")
-	}
-
-	if m.inputChannel == nil {
-		waitGroup.Done()
-		return fmt.Errorf("input channel not connected")
-	}
-
-	go m.doWork(waitGroup)
-
-	return nil
-}
-
-func (m *EmailOutputModule) Stop() {
-	close(m.quitChannel)
-	m.quitChannel = make(chan struct{})
-}
-
-func (m *EmailOutputModule) doWork(waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
-L:
-	for {
-		select {
-		case item, ok := <-m.inputChannel:
-			if ok {
-				m.emailItems = append(m.emailItems, item)
-			} else {
-				m.inputChannel = nil
-				break L
-			}
-		case <-m.quitChannel:
-			break L
-		}
-	}
+func (m *EmailOutputModule) sendEmail(
+	consumerChannel <-chan *datatypes.PipelineItem) {
+	// Setup body.
 	body := "To: " + m.to + "\r\nSubject: " + m.subject + "\r\n\r\n"
-	for i, emailItem := range m.emailItems {
-		body += fmt.Sprintf("%d : %v\r\n", i, emailItem)
+
+	// Add items to body.
+	i := 1
+	for pipelineItem := range consumerChannel {
+		body += fmt.Sprintf("%d : %v\r\n", i, pipelineItem)
+		i++
 	}
-	smtp.SendMail(m.smtpServer, smtp.PlainAuth("", m.authUser,
+
+	// Send email.
+	err := smtp.SendMail(m.smtpServer, smtp.PlainAuth("", m.authUser,
 		m.authPassword, strings.Split(m.smtpServer, ":")[0]), m.from,
 		[]string{m.to}, []byte(body))
+	if err != nil {
+		// TODO(bga): Log error.
+	}
 }
 
 func init() {
-	pipeliner_modules.RegisterPipelinerOutputModule(NewEmailOutputModule(""))
+	pipeliner_modules.RegisterPipelinerOutputModule(
+		NewEmailOutputModule(""))
 }
+

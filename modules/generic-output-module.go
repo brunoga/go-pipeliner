@@ -15,11 +15,12 @@ type GenericOutputModule struct {
 	inputChannel chan *datatypes.PipelineItem
 	quitChannel  chan struct{}
 
-	consumerFunc func(*datatypes.PipelineItem) bool
+	consumerFunc func(<-chan *datatypes.PipelineItem)
 }
 
 func NewGenericOutputModule(name, version, genericId, specificId string,
-	consumerFunc func(*datatypes.PipelineItem) bool) *GenericOutputModule {
+	consumerFunc func(
+		<-chan *datatypes.PipelineItem)) *GenericOutputModule {
 	return &GenericOutputModule{
 		base_modules.NewGenericModule(name, version, genericId,
 			specificId, "pipeliner-output"),
@@ -55,49 +56,29 @@ func (m *GenericOutputModule) Stop() {
 }
 
 func (m *GenericOutputModule) SetConsumerFunc(
-	consumerFunc func(*datatypes.PipelineItem) bool) {
+	consumerFunc func(<-chan *datatypes.PipelineItem)) {
 	m.consumerFunc = consumerFunc
 }
 
 func (m *GenericOutputModule) doWork(waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	consumerChannel := make(chan *datatypes.PipelineItem)
-	consumerControlChannel := make(chan struct{})
 
-	go m.itemHandler(consumerChannel, consumerControlChannel)
+	go m.consumerFunc(consumerChannel)
 L:
 	for {
 		select {
-		case item, ok := <-m.inputChannel:
+		case pipelineItem, ok := <-m.inputChannel:
 			if ok {
-				consumerChannel <- item
+				consumerChannel <- pipelineItem
 			} else {
-				close(consumerControlChannel)
+				close(consumerChannel)
 				m.inputChannel = nil
 				break L
 			}
 		case <-m.quitChannel:
-			close(consumerControlChannel)
+			close(consumerChannel)
 			break L
 		}
 	}
 }
-
-func (m *GenericOutputModule) itemHandler(
-	consumerChannel <-chan *datatypes.PipelineItem,
-        consumerControlChannel <-chan struct{}) {
-L:
-	for {
-		select {
-		case _, ok := <-consumerControlChannel:
-			if !ok {
-				break L
-			}
-		case pipelineItem := <-consumerChannel:
-			// TODO(bga): We might do something with the returned
-			// boolean.
-			_ = m.consumerFunc(pipelineItem)
-		}
-	}
-}
-
