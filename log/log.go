@@ -5,8 +5,8 @@ import (
 )
 
 type LogEntry struct {
-	module base_modules.Module
-	err error
+	Module base_modules.Module
+	Err error
 }
 
 func NewLogEntry(module base_modules.Module, err error) *LogEntry {

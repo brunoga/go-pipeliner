@@ -59,6 +59,8 @@ type Pipeline struct {
 	demultiplexer *demultiplexerModule
 
 	waitGroup *sync.WaitGroup
+
+	logChannel chan *log.LogEntry
 }
 
 func New(name string) *Pipeline {
@@ -73,6 +75,8 @@ func New(name string) *Pipeline {
 		demultiplexer: nil,
 
 		waitGroup: nil,
+
+		logChannel: make(chan *log.LogEntry),
 	}
 }
 
@@ -86,6 +90,8 @@ func (p *Pipeline) AddInputNode(inputNode InputNode) error {
 		return fmt.Errorf("tried to add a filter node as an input node")
 	}
 
+	inputNode.SetLogChannel(p.logChannel)
+
 	p.inputNodes = append(p.inputNodes, inputNode)
 
 	return nil
@@ -95,6 +101,8 @@ func (p *Pipeline) AddFilterNode(filterNode FilterNode) error {
 	if filterNode == nil {
 		return fmt.Errorf("can't add a nil filter node")
 	}
+
+	filterNode.SetLogChannel(p.logChannel)
 
 	p.filterNodes = append(p.filterNodes, filterNode)
 
@@ -111,6 +119,8 @@ func (p *Pipeline) AddOutputNode(outputNode OutputNode) error {
 		return fmt.Errorf("tried to add a filter node as an output node")
 	}
 
+	outputNode.SetLogChannel(p.logChannel)
+
 	p.outputNodes = append(p.outputNodes, outputNode)
 
 	return nil
@@ -123,6 +133,10 @@ func (p *Pipeline) Start() error {
 	}
 
 	p.waitGroup = new(sync.WaitGroup)
+
+	// Start log task.
+	p.waitGroup.Add(1)
+	go p.logTask()
 
 	// Start all inputs.
 	for _, inputNode := range p.inputNodes {
@@ -182,6 +196,9 @@ func (p *Pipeline) Stop() {
 	for _, outputNode := range p.outputNodes {
 		outputNode.Stop()
 	}
+
+	// Stop log task.
+	close(p.logChannel)
 }
 
 func (p *Pipeline) Wait() {
@@ -295,3 +312,12 @@ func (p *Pipeline) connectPipeline() error {
 
 	return nil
 }
+
+func (p *Pipeline) logTask() {
+	defer p.waitGroup.Done()
+	for logEntry := range p.logChannel {
+		fmt.Printf("%s/%s : %v\n", logEntry.Module.GenericId(),
+			logEntry.Module.SpecificId(), logEntry.Err)
+	}
+}
+
