@@ -5,16 +5,13 @@ import (
 	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
-
-	base_modules "github.com/brunoga/go-modules"
 )
 
 type GenericFilterModule struct {
-	*base_modules.GenericModule
+	*GenericPipelineModule
 
 	inputChannel  chan *datatypes.PipelineItem
 	outputChannel chan<- *datatypes.PipelineItem
-	quitChannel   chan struct{}
 
 	filterFunc func(*datatypes.PipelineItem) bool
 }
@@ -22,18 +19,12 @@ type GenericFilterModule struct {
 func NewGenericFilterModule(name, version, genericId, specificId string,
 	filterFunc func(*datatypes.PipelineItem) bool) *GenericFilterModule {
 	return &GenericFilterModule{
-		base_modules.NewGenericModule(name, version, genericId,
-			specificId, "pipeliner-filter"),
+		NewGenericPipelineModule(name, version, genericId, specificId,
+			"pipeliner-filter"),
 		make(chan *datatypes.PipelineItem),
 		nil,
-		make(chan struct{}),
 		filterFunc,
 	}
-}
-
-func (m *GenericFilterModule) Duplicate(specificId string) (base_modules.Module,
-	error) {
-	return nil, fmt.Errorf("generic filter module can not be duplicated")
 }
 
 func (m *GenericFilterModule) GetInputChannel() chan<- *datatypes.PipelineItem {
@@ -69,11 +60,6 @@ func (m *GenericFilterModule) Start(waitGroup *sync.WaitGroup) error {
 	go m.doWork(waitGroup)
 
 	return nil
-}
-
-func (m *GenericFilterModule) Stop() {
-	close(m.quitChannel)
-	m.quitChannel = make(chan struct{})
 }
 
 func (m *GenericFilterModule) SetFilterFunc(

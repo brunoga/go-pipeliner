@@ -5,15 +5,12 @@ import (
 	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
-
-	base_modules "github.com/brunoga/go-modules"
 )
 
 type GenericOutputModule struct {
-	*base_modules.GenericModule
+	*GenericPipelineModule
 
 	inputChannel chan *datatypes.PipelineItem
-	quitChannel  chan struct{}
 
 	consumerFunc func(<-chan *datatypes.PipelineItem, *sync.WaitGroup)
 }
@@ -22,17 +19,11 @@ func NewGenericOutputModule(name, version, genericId, specificId string,
 	consumerFunc func(<-chan *datatypes.PipelineItem,
 		*sync.WaitGroup)) *GenericOutputModule {
 	return &GenericOutputModule{
-		base_modules.NewGenericModule(name, version, genericId,
-			specificId, "pipeliner-output"),
+		NewGenericPipelineModule(name, version, genericId, specificId,
+			"pipeliner-output"),
 		make(chan *datatypes.PipelineItem),
-		make(chan struct{}),
 		consumerFunc,
 	}
-}
-
-func (m *GenericOutputModule) Duplicate(specificId string) (base_modules.Module,
-	error) {
-	return nil, fmt.Errorf("generic output module can not be duplicated")
 }
 
 func (m *GenericOutputModule) GetInputChannel() chan<- *datatypes.PipelineItem {
@@ -48,11 +39,6 @@ func (m *GenericOutputModule) Start(waitGroup *sync.WaitGroup) error {
 	go m.doWork(waitGroup)
 
 	return nil
-}
-
-func (m *GenericOutputModule) Stop() {
-	close(m.quitChannel)
-	m.quitChannel = make(chan struct{})
 }
 
 func (m *GenericOutputModule) SetConsumerFunc(

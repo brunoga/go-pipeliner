@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
+	"github.com/brunoga/go-pipeliner/log"
 
 	base_modules "github.com/brunoga/go-modules"
 )
@@ -15,6 +16,7 @@ type multiplexerModule struct {
 	inputChannels []<-chan *datatypes.PipelineItem
 	outputChannel chan<- *datatypes.PipelineItem
 	quitChannel   chan struct{}
+	logChannel chan<- *log.LogEntry
 }
 
 func newMultiplexerModule(specificId string) *multiplexerModule {
@@ -24,6 +26,7 @@ func newMultiplexerModule(specificId string) *multiplexerModule {
 		nil,
 		nil,
 		make(chan struct{}),
+		nil,
 	}
 }
 
@@ -40,6 +43,10 @@ func (m *multiplexerModule) SetOutputChannel(outputChannel chan<- *datatypes.Pip
 
 	m.outputChannel = outputChannel
 	return nil
+}
+
+func (m *multiplexerModule) SetLogChannel(logChannel chan<- *log.LogEntry) {
+	m.logChannel = logChannel
 }
 
 func (m *multiplexerModule) Duplicate(specificId string) (base_modules.Module, error) {

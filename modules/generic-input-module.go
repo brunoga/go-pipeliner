@@ -5,15 +5,12 @@ import (
 	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
-
-	base_modules "github.com/brunoga/go-modules"
 )
 
 type GenericInputModule struct {
-	*base_modules.GenericModule
+	*GenericPipelineModule
 
 	outputChannel chan<- *datatypes.PipelineItem
-	quitChannel   chan struct{}
 
 	generatorFunc func(chan<- *datatypes.PipelineItem, <-chan struct{})
 }
@@ -22,19 +19,15 @@ func NewGenericInputModule(name, version, genericId, specificId string,
 	generatorFunc func(chan<- *datatypes.PipelineItem,
 		<-chan struct{})) *GenericInputModule {
 	return &GenericInputModule{
-		base_modules.NewGenericModule(name, version,
-			genericId, specificId, "pipeliner-input"),
+		NewGenericPipelineModule(name, version, genericId, specificId,
+			"pipeliner-input"),
 		nil,
-		make(chan struct{}),
 		generatorFunc,
 	}
 }
 
-func (m *GenericInputModule) Duplicate(specificId string) (base_modules.Module, error) {
-	return nil, fmt.Errorf("generic input module can not be duplicated")
-}
-
-func (m *GenericInputModule) SetOutputChannel(outputChannel chan<- *datatypes.PipelineItem) error {
+func (m *GenericInputModule) SetOutputChannel(
+	outputChannel chan<- *datatypes.PipelineItem) error {
 	if outputChannel == nil {
 		return fmt.Errorf("can't set output to a nil channel")
 	}
@@ -57,11 +50,6 @@ func (m *GenericInputModule) Start(waitGroup *sync.WaitGroup) error {
 	go m.doWork(waitGroup)
 
 	return nil
-}
-
-func (m *GenericInputModule) Stop() {
-	close(m.quitChannel)
-	m.quitChannel = make(chan struct{})
 }
 
 func (m *GenericInputModule) SetGeneratorFunc(
@@ -92,3 +80,4 @@ L:
 		}
 	}
 }
+

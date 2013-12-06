@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
+	"github.com/brunoga/go-pipeliner/log"
 
 	base_modules "github.com/brunoga/go-modules"
 )
@@ -29,6 +30,7 @@ type InputNode interface {
 	Starter
 	Stopper
 	OutputChannelSetter
+	log.Logger
 }
 
 type FilterNode interface {
@@ -36,12 +38,14 @@ type FilterNode interface {
 	Stopper
 	OutputChannelSetter
 	InputChannelGetter
+	log.Logger
 }
 
 type OutputNode interface {
 	Starter
 	Stopper
 	InputChannelGetter
+	log.Logger
 }
 
 type Pipeline struct {
