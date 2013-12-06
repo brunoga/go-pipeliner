@@ -33,3 +33,9 @@ func (m *GenericPipelineModule) SetLogChannel(
 	m.logChannel = logChannel
 }
 
+func (m *GenericPipelineModule) Log(err error) {
+	if m.logChannel != nil {
+		m.logChannel <- log.NewLogEntry(m, err)
+	}
+}
+
