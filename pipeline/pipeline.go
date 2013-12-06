@@ -263,6 +263,8 @@ func (p *Pipeline) connectPipeline() error {
 
 		p.demultiplexer = module.(*demultiplexerModule)
 
+		p.demultiplexer.SetLogChannel(p.logChannel)
+
 		// Connect demultiplexer to all output nodes.
 		for _, outputNode := range p.outputNodes {
 			p.demultiplexer.SetOutputChannel(outputNode.GetInputChannel())
@@ -298,6 +300,8 @@ func (p *Pipeline) connectPipeline() error {
 		}
 
 		p.multiplexer = module.(*multiplexerModule)
+
+		p.multiplexer.SetLogChannel(p.logChannel)
 
 		// Connect multiplexer to last node.
 		p.multiplexer.SetOutputChannel(lastNode.GetInputChannel())
