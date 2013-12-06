@@ -59,6 +59,7 @@ type Pipeline struct {
 	demultiplexer *demultiplexerModule
 
 	waitGroup *sync.WaitGroup
+	logWaitGroup *sync.WaitGroup
 
 	logChannel chan *log.LogEntry
 }
@@ -75,6 +76,7 @@ func New(name string) *Pipeline {
 		demultiplexer: nil,
 
 		waitGroup: nil,
+		logWaitGroup: nil,
 
 		logChannel: make(chan *log.LogEntry),
 	}
@@ -132,11 +134,12 @@ func (p *Pipeline) Start() error {
 		return err
 	}
 
-	p.waitGroup = new(sync.WaitGroup)
-
 	// Start log task.
-	p.waitGroup.Add(1)
+	p.logWaitGroup = new(sync.WaitGroup)
+	p.logWaitGroup.Add(1)
 	go p.logTask()
+
+	p.waitGroup = new(sync.WaitGroup)
 
 	// Start all inputs.
 	for _, inputNode := range p.inputNodes {
@@ -203,6 +206,8 @@ func (p *Pipeline) Stop() {
 
 func (p *Pipeline) Wait() {
 	p.waitGroup.Wait()
+	close(p.logChannel)
+	p.logWaitGroup.Wait()
 }
 
 func (p *Pipeline) String() string {
@@ -318,7 +323,7 @@ func (p *Pipeline) connectPipeline() error {
 }
 
 func (p *Pipeline) logTask() {
-	defer p.waitGroup.Done()
+	defer p.logWaitGroup.Done()
 	for logEntry := range p.logChannel {
 		fmt.Printf("%s/%s : %v\n", logEntry.Module.GenericId(),
 			logEntry.Module.SpecificId(), logEntry.Err)
