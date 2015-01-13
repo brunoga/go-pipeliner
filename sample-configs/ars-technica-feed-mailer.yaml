@@ -10,7 +10,7 @@
 # Replace [path to file] with the path to this file.
 - pipeline:
     name: ars-technica-feed-mailer
-    input:
+    producer:
       - rss:
           name: ars-technica-feed
           url: http://feeds.arstechnica.com/arstechnica/index?format=xml
