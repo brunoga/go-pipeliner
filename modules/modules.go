@@ -6,12 +6,12 @@ import (
 	base_modules "github.com/brunoga/go-modules"
 )
 
-type PipelinerInputModule interface {
+type PipelinerProducerModule interface {
 	// Include methods from the base module interface.
 	base_modules.Module
 
 	// Include methods required by pipeline input nodes.
-	pipeline.InputNode
+	pipeline.ProducerNode
 }
 
 type PipelinerFilterModule interface {
@@ -30,8 +30,8 @@ type PipelinerOutputModule interface {
 	pipeline.OutputNode
 }
 
-// RegisterPipelinerInputModule registers a Pipeliner input module.
-func RegisterPipelinerInputModule(module PipelinerInputModule) error {
+// RegisterPipelinerInputModule registers a Pipeliner producer module.
+func RegisterPipelinerProducerModule(module PipelinerProducerModule) error {
 	return base_modules.RegisterModule(module)
 }
 

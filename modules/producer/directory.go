@@ -12,28 +12,28 @@ import (
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 )
 
-type DirectoryInputModule struct {
-	*pipeliner_modules.GenericInputModule
+type DirectoryProducerModule struct {
+	*pipeliner_modules.GenericProducerModule
 
 	path      string
 	recursive bool
 }
 
-func NewDirectoryInputModule(specificId string) *DirectoryInputModule {
-	directoryInputModule := &DirectoryInputModule{
-		pipeliner_modules.NewGenericInputModule(
-			"Directory Input Module", "1.0.0",
+func NewDirectoryProducerModule(specificId string) *DirectoryProducerModule {
+	directoryProducerModule := &DirectoryProducerModule{
+		pipeliner_modules.NewGenericProducerModule(
+			"Directory Producer Module", "1.0.0",
 			"directory", specificId, nil),
 		"",
 		false,
 	}
-	directoryInputModule.SetGeneratorFunc(
-		directoryInputModule.setupReadDirectory)
+	directoryProducerModule.SetProducerFunc(
+		directoryProducerModule.setupReadDirectory)
 
-	return directoryInputModule
+	return directoryProducerModule
 }
 
-func (m *DirectoryInputModule) Configure(
+func (m *DirectoryProducerModule) Configure(
 	params *base_modules.ParameterMap) error {
 	var ok bool
 
@@ -68,17 +68,17 @@ func (m *DirectoryInputModule) Configure(
 	return nil
 }
 
-func (m *DirectoryInputModule) Parameters() *base_modules.ParameterMap {
+func (m *DirectoryProducerModule) Parameters() *base_modules.ParameterMap {
 	return &base_modules.ParameterMap{
 		"path":      "",
 		"recursive": "false",
 	}
 }
 
-func (m *DirectoryInputModule) Duplicate(
+func (m *DirectoryProducerModule) Duplicate(
 	specificId string) (base_modules.Module, error) {
-	duplicate := NewDirectoryInputModule(specificId)
-	err := pipeliner_modules.RegisterPipelinerInputModule(duplicate)
+	duplicate := NewDirectoryProducerModule(specificId)
+	err := pipeliner_modules.RegisterPipelinerProducerModule(duplicate)
 	if err != nil {
 		return nil, err
 	}
@@ -86,18 +86,18 @@ func (m *DirectoryInputModule) Duplicate(
 	return duplicate, nil
 }
 
-func (m *DirectoryInputModule) setupReadDirectory(
-	generatorChannel chan<- *datatypes.PipelineItem,
-	generatorControlChannel <-chan struct{}) {
-	defer close(generatorChannel)
+func (m *DirectoryProducerModule) setupReadDirectory(
+	producerChannel chan<- *datatypes.PipelineItem,
+	producerControlChannel <-chan struct{}) {
+	defer close(producerChannel)
 
-	readDirectory(m.GenericId(), m.path, m.recursive, generatorChannel,
-		generatorControlChannel)
+	readDirectory(m.GenericId(), m.path, m.recursive, producerChannel,
+		producerControlChannel)
 }
 
 func readDirectory(genericId, path string, recursive bool,
-	generatorChannel chan<- *datatypes.PipelineItem,
-	generatorControlChannel <-chan struct{}) {
+	producerChannel chan<- *datatypes.PipelineItem,
+	producerControlChannel <-chan struct{}) {
 	fileInfos, err := ioutil.ReadDir(path)
 	if err != nil {
 		// TODO(bga): Log error.
@@ -108,8 +108,8 @@ L:
 	for _, file := range fileInfos {
 		if file.IsDir() && recursive {
 			readDirectory(genericId, filepath.Join(path,
-				file.Name()), true, generatorChannel,
-				generatorControlChannel)
+				file.Name()), true, producerChannel,
+				producerControlChannel)
 		} else if !file.IsDir() {
 			fileUrl, err := url.Parse("file://" + filepath.Join(
 				path, file.Name()))
@@ -124,11 +124,11 @@ L:
 			pipelineItem.AddPayload("directory", file)
 
 			select {
-			case _, ok := <-generatorControlChannel:
+			case _, ok := <-producerControlChannel:
 				if !ok {
 					break L
 				}
-			case generatorChannel <- pipelineItem:
+			case producerChannel <- pipelineItem:
 				// Do nothing.
 			}
 		}
@@ -136,6 +136,6 @@ L:
 }
 
 func init() {
-	pipeliner_modules.RegisterPipelinerInputModule(
-		NewDirectoryInputModule(""))
+	pipeliner_modules.RegisterPipelinerProducerModule(
+		NewDirectoryProducerModule(""))
 }

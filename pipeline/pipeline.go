@@ -26,7 +26,7 @@ type OutputChannelSetter interface {
 	SetOutputChannel(chan<- *datatypes.PipelineItem) error
 }
 
-type InputNode interface {
+type ProducerNode interface {
 	Starter
 	Stopper
 	OutputChannelSetter
@@ -51,14 +51,14 @@ type OutputNode interface {
 type Pipeline struct {
 	name string
 
-	inputNodes  []InputNode
-	filterNodes []FilterNode
-	outputNodes []OutputNode
+	producerNodes []ProducerNode
+	filterNodes   []FilterNode
+	outputNodes   []OutputNode
 
 	multiplexer   *multiplexerModule
 	demultiplexer *demultiplexerModule
 
-	waitGroup *sync.WaitGroup
+	waitGroup    *sync.WaitGroup
 	logWaitGroup *sync.WaitGroup
 
 	logChannel chan *log.LogEntry
@@ -68,33 +68,33 @@ func New(name string) *Pipeline {
 	return &Pipeline{
 		name: name,
 
-		inputNodes:  nil,
-		filterNodes: nil,
-		outputNodes: nil,
+		producerNodes: nil,
+		filterNodes:   nil,
+		outputNodes:   nil,
 
 		multiplexer:   nil,
 		demultiplexer: nil,
 
-		waitGroup: nil,
+		waitGroup:    nil,
 		logWaitGroup: nil,
 
 		logChannel: make(chan *log.LogEntry),
 	}
 }
 
-func (p *Pipeline) AddInputNode(inputNode InputNode) error {
-	if inputNode == nil {
-		return fmt.Errorf("can't add a nil input node")
+func (p *Pipeline) AddProducerNode(producerNode ProducerNode) error {
+	if producerNode == nil {
+		return fmt.Errorf("can't add a nil producer node")
 	}
 
-	_, ok := inputNode.(FilterNode)
+	_, ok := producerNode.(FilterNode)
 	if ok {
-		return fmt.Errorf("tried to add a filter node as an input node")
+		return fmt.Errorf("tried to add a filter node as a producer node")
 	}
 
-	inputNode.SetLogChannel(p.logChannel)
+	producerNode.SetLogChannel(p.logChannel)
 
-	p.inputNodes = append(p.inputNodes, inputNode)
+	p.producerNodes = append(p.producerNodes, producerNode)
 
 	return nil
 }
@@ -142,9 +142,9 @@ func (p *Pipeline) Start() error {
 	p.waitGroup = new(sync.WaitGroup)
 
 	// Start all inputs.
-	for _, inputNode := range p.inputNodes {
+	for _, producerNode := range p.producerNodes {
 		p.waitGroup.Add(1)
-		inputNode.Start(p.waitGroup)
+		producerNode.Start(p.waitGroup)
 	}
 
 	// Start multiplexer if we have one.
@@ -176,8 +176,8 @@ func (p *Pipeline) Start() error {
 
 func (p *Pipeline) Stop() {
 	// Stop all inputs.
-	for _, inputNode := range p.inputNodes {
-		inputNode.Stop()
+	for _, producerNode := range p.producerNodes {
+		producerNode.Stop()
 	}
 
 	// Stop multiplexer if we have one.
@@ -215,10 +215,10 @@ func (p *Pipeline) String() string {
 }
 
 func (p *Pipeline) Dump() {
-	fmt.Printf("\n** Pipeline %q configured with %d nodes:\n", p.name, len(p.inputNodes)+
+	fmt.Printf("\n** Pipeline %q configured with %d nodes:\n", p.name, len(p.producerNodes)+
 		len(p.filterNodes)+len(p.outputNodes))
-	fmt.Println("\n--- Inputs  ---")
-	for _, node := range p.inputNodes {
+	fmt.Println("\n--- Producers  ---")
+	for _, node := range p.producerNodes {
 		stringer := node.(fmt.Stringer)
 		fmt.Println(stringer)
 	}
@@ -235,8 +235,8 @@ func (p *Pipeline) Dump() {
 }
 
 func (p *Pipeline) checkPipeline() error {
-	if len(p.inputNodes) == 0 {
-		return fmt.Errorf("no input nodes added to the pipeline")
+	if len(p.producerNodes) == 0 {
+		return fmt.Errorf("no producer nodes added to the pipeline")
 	}
 
 	if len(p.outputNodes) == 0 {
@@ -293,7 +293,7 @@ func (p *Pipeline) connectPipeline() error {
 	}
 
 	// Connect inputs to the pipeline.
-	if len(p.inputNodes) > 1 {
+	if len(p.producerNodes) > 1 {
 		multiplexer := base_modules.GetDefaultModuleByGenericId("multiplexer")
 		if multiplexer == nil {
 			return fmt.Errorf("no multiplexer module available")
@@ -311,12 +311,12 @@ func (p *Pipeline) connectPipeline() error {
 		// Connect multiplexer to last node.
 		p.multiplexer.SetOutputChannel(lastNode.GetInputChannel())
 
-		// Connect all inputs to multiplexer.
-		for _, inputNode := range p.inputNodes {
-			inputNode.SetOutputChannel(p.multiplexer.GetInputChannel())
+		// Connect all producers to multiplexer.
+		for _, producerNode := range p.producerNodes {
+			producerNode.SetOutputChannel(p.multiplexer.GetInputChannel())
 		}
 	} else {
-		p.inputNodes[0].SetOutputChannel(lastNode.GetInputChannel())
+		p.producerNodes[0].SetOutputChannel(lastNode.GetInputChannel())
 	}
 
 	return nil
@@ -329,4 +329,3 @@ func (p *Pipeline) logTask() {
 			logEntry.Module.SpecificId(), logEntry.Err)
 	}
 }
-

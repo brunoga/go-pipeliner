@@ -11,8 +11,8 @@ import (
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 
 	_ "github.com/brunoga/go-pipeliner/modules/filter"
-	_ "github.com/brunoga/go-pipeliner/modules/input"
 	_ "github.com/brunoga/go-pipeliner/modules/output"
+	_ "github.com/brunoga/go-pipeliner/modules/producer"
 )
 
 type Config struct {
@@ -152,26 +152,26 @@ func setupModule(node yaml.Node, key string) (modules_base.Module, error) {
 	return module, nil
 }
 
-func processInputNode(inputNode yaml.Node, pipeline *pipeline.Pipeline) error {
-	return processListOrMapNode(inputNode, true, func(node yaml.Node, key string) error {
+func processProducerNode(producerNode yaml.Node, pipeline *pipeline.Pipeline) error {
+	return processListOrMapNode(producerNode, true, func(node yaml.Node, key string) error {
 		module, err := setupModule(node, key)
 		if err != nil {
 			return err
 		}
 
-		if module.Type() != "pipeliner-input" {
-			return fmt.Errorf("%s is not a pipeliner input module",
+		if module.Type() != "pipeliner-producer" {
+			return fmt.Errorf("%s is not a pipeliner producer module",
 				module.GenericId())
 		}
 
-		pipeline.AddInputNode(module.(pipeliner_modules.PipelinerInputModule))
+		pipeline.AddProducerNode(module.(pipeliner_modules.PipelinerProducerModule))
 
 		return nil
 	})
 }
 
-func processFilterNode(inputNode yaml.Node, pipeline *pipeline.Pipeline) error {
-	return processListOrMapNode(inputNode, true, func(node yaml.Node, key string) error {
+func processFilterNode(filterNode yaml.Node, pipeline *pipeline.Pipeline) error {
+	return processListOrMapNode(filterNode, true, func(node yaml.Node, key string) error {
 		module, err := setupModule(node, key)
 		if err != nil {
 			return err
@@ -221,15 +221,15 @@ func validatePipeline(pipelineNode yaml.Node, key string) (*pipeline.Pipeline, e
 
 	pipeline := pipeline.New(nameNode.(yaml.Scalar).String())
 
-	inputNode, err := yaml.Child(pipelineNode, ".input")
+	producerNode, err := yaml.Child(pipelineNode, ".producer")
 	if err != nil {
 		return nil, err
 	}
-	if inputNode == nil {
-		return nil, fmt.Errorf("Missing input field in pipeline.")
+	if producerNode == nil {
+		return nil, fmt.Errorf("Missing producer field in pipeline.")
 	}
 
-	err = processInputNode(inputNode, pipeline)
+	err = processProducerNode(producerNode, pipeline)
 	if err != nil {
 		return nil, err
 	}

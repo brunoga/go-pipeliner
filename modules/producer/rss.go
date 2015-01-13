@@ -11,24 +11,24 @@ import (
 	rss "github.com/jteeuwen/go-pkg-rss"
 )
 
-type RssInputModule struct {
-	*pipeliner_modules.GenericInputModule
+type RssProducerModule struct {
+	*pipeliner_modules.GenericProducerModule
 
 	rssUrl *url.URL
 }
 
-func NewRssInputModule(specificId string) *RssInputModule {
-	rssInputModule := &RssInputModule{
-		pipeliner_modules.NewGenericInputModule("RSS Input Module",
+func NewRssProducerModule(specificId string) *RssProducerModule {
+	rssProducerModule := &RssProducerModule{
+		pipeliner_modules.NewGenericProducerModule("RSS Producer Module",
 			"1.0.0", "rss", specificId, nil),
 		nil,
 	}
-	rssInputModule.SetGeneratorFunc(rssInputModule.setupReadRss)
+	rssProducerModule.SetProducerFunc(rssProducerModule.setupReadRss)
 
-	return rssInputModule
+	return rssProducerModule
 }
 
-func (m *RssInputModule) Configure(params *base_modules.ParameterMap) error {
+func (m *RssProducerModule) Configure(params *base_modules.ParameterMap) error {
 	var ok bool
 
 	urlParamStr, ok := (*params)["url"]
@@ -48,16 +48,16 @@ func (m *RssInputModule) Configure(params *base_modules.ParameterMap) error {
 	return nil
 }
 
-func (m *RssInputModule) Parameters() *base_modules.ParameterMap {
+func (m *RssProducerModule) Parameters() *base_modules.ParameterMap {
 	return &base_modules.ParameterMap{
 		"url": "",
 	}
 }
 
-func (m *RssInputModule) Duplicate(specificId string) (base_modules.Module,
+func (m *RssProducerModule) Duplicate(specificId string) (base_modules.Module,
 	error) {
-	duplicate := NewRssInputModule(specificId)
-	err := pipeliner_modules.RegisterPipelinerInputModule(duplicate)
+	duplicate := NewRssProducerModule(specificId)
+	err := pipeliner_modules.RegisterPipelinerProducerModule(duplicate)
 	if err != nil {
 		return nil, err
 	}
@@ -65,18 +65,18 @@ func (m *RssInputModule) Duplicate(specificId string) (base_modules.Module,
 	return duplicate, nil
 }
 
-func (m *RssInputModule) setupReadRss(
-	generatorChannel chan<- *datatypes.PipelineItem,
-	generatorControlChannel <-chan struct{}) {
-	defer close(generatorChannel)
+func (m *RssProducerModule) setupReadRss(
+	producerChannel chan<- *datatypes.PipelineItem,
+	producerControlChannel <-chan struct{}) {
+	defer close(producerChannel)
 
-	readRss(m.GenericId(), m.rssUrl, generatorChannel,
-		generatorControlChannel)
+	readRss(m.GenericId(), m.rssUrl, producerChannel,
+		producerControlChannel)
 }
 
 func readRss(genericId string, rssUrl *url.URL,
-	generatorChannel chan<- *datatypes.PipelineItem,
-	generatorControlChannel <-chan struct{}) {
+	producerChannel chan<- *datatypes.PipelineItem,
+	producerControlChannel <-chan struct{}) {
 	feed := rss.New(5, true, nil,
 		func(feed *rss.Feed, ch *rss.Channel, newItems []*rss.Item) {
 		L:
@@ -95,11 +95,11 @@ func readRss(genericId string, rssUrl *url.URL,
 				pipelineItem.AddPayload("rss", item)
 
 				select {
-				case _, ok := <-generatorControlChannel:
+				case _, ok := <-producerControlChannel:
 					if !ok {
 						break L
 					}
-				case generatorChannel <- pipelineItem:
+				case producerChannel <- pipelineItem:
 					// Do nothing.
 				}
 			}
@@ -108,5 +108,5 @@ func readRss(genericId string, rssUrl *url.URL,
 }
 
 func init() {
-	pipeliner_modules.RegisterPipelinerInputModule(NewRssInputModule(""))
+	pipeliner_modules.RegisterPipelinerProducerModule(NewRssProducerModule(""))
 }
