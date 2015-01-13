@@ -14,12 +14,12 @@ type PipelinerProducerModule interface {
 	pipeline.ProducerNode
 }
 
-type PipelinerFilterModule interface {
+type PipelinerProcessorModule interface {
 	// Include methods from the base module interface.
 	base_modules.Module
 
-	// Include methods required by pipeline filter nodes.
-	pipeline.FilterNode
+	// Include methods required by pipeline processor nodes.
+	pipeline.ProcessorNode
 }
 
 type PipelinerConsumerModule interface {
@@ -35,8 +35,8 @@ func RegisterPipelinerProducerModule(module PipelinerProducerModule) error {
 	return base_modules.RegisterModule(module)
 }
 
-// RegisterPipelinerFilterModule registers a Pipeliner filter module.
-func RegisterPipelinerFilterModule(module PipelinerFilterModule) error {
+// RegisterPipelinerProcessorModule registers a Pipeliner processor module.
+func RegisterPipelinerProcessorModule(module PipelinerProcessorModule) error {
 	return base_modules.RegisterModule(module)
 }
 

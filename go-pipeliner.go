@@ -30,12 +30,12 @@ func main() {
 	flag.Parse()
 
 	if *listModules {
-		fmt.Println("----- Input  Modules -----\n")
-		printModulesByType("pipeliner-input")
-		fmt.Println("\n----- Filter Modules -----\n")
-		printModulesByType("pipeliner-filter")
-		fmt.Println("\n----- Output Modules -----\n")
-		printModulesByType("pipeliner-output")
+		fmt.Println("----- Producer  Modules -----\n")
+		printModulesByType("pipeliner-producer")
+		fmt.Println("\n----- Processor Modules -----\n")
+		printModulesByType("pipeliner-processor")
+		fmt.Println("\n----- Consumer  Modules -----\n")
+		printModulesByType("pipeliner-consumer")
 		fmt.Println("")
 		return
 	}

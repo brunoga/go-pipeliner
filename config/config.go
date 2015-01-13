@@ -11,7 +11,7 @@ import (
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 
 	_ "github.com/brunoga/go-pipeliner/modules/consumer"
-	_ "github.com/brunoga/go-pipeliner/modules/filter"
+	_ "github.com/brunoga/go-pipeliner/modules/processor"
 	_ "github.com/brunoga/go-pipeliner/modules/producer"
 )
 
@@ -170,19 +170,19 @@ func processProducerNode(producerNode yaml.Node, pipeline *pipeline.Pipeline) er
 	})
 }
 
-func processFilterNode(filterNode yaml.Node, pipeline *pipeline.Pipeline) error {
-	return processListOrMapNode(filterNode, true, func(node yaml.Node, key string) error {
+func processProcessorNode(processorNode yaml.Node, pipeline *pipeline.Pipeline) error {
+	return processListOrMapNode(processorNode, true, func(node yaml.Node, key string) error {
 		module, err := setupModule(node, key)
 		if err != nil {
 			return err
 		}
 
-		if module.Type() != "pipeliner-filter" {
-			return fmt.Errorf("%s is not a pipeliner filter module",
+		if module.Type() != "pipeliner-processor" {
+			return fmt.Errorf("%s is not a pipeliner processor module",
 				module.GenericId())
 		}
 
-		pipeline.AddFilterNode(module.(pipeliner_modules.PipelinerFilterModule))
+		pipeline.AddProcessorNode(module.(pipeliner_modules.PipelinerProcessorModule))
 
 		return nil
 	})
@@ -234,16 +234,16 @@ func validatePipeline(pipelineNode yaml.Node, key string) (*pipeline.Pipeline, e
 		return nil, err
 	}
 
-	// Filter nodes are optional.
-	filterNode, err := yaml.Child(pipelineNode, ".filter")
+	// Processor nodes are optional.
+	processorNode, err := yaml.Child(pipelineNode, ".processor")
 	if err != nil {
 		if _, ok := err.(*yaml.NodeNotFound); !ok {
 			return nil, err
 		}
 
 	}
-	if filterNode != nil {
-		err = processFilterNode(filterNode, pipeline)
+	if processorNode != nil {
+		err = processProcessorNode(processorNode, pipeline)
 		if err != nil {
 			return nil, err
 		}

@@ -33,7 +33,7 @@ type ProducerNode interface {
 	log.Logger
 }
 
-type FilterNode interface {
+type ProcessorNode interface {
 	Starter
 	Stopper
 	OutputChannelSetter
@@ -51,9 +51,9 @@ type ConsumerNode interface {
 type Pipeline struct {
 	name string
 
-	producerNodes []ProducerNode
-	filterNodes   []FilterNode
-	consumerNodes []ConsumerNode
+	producerNodes  []ProducerNode
+	processorNodes []ProcessorNode
+	consumerNodes  []ConsumerNode
 
 	multiplexer   *multiplexerModule
 	demultiplexer *demultiplexerModule
@@ -68,9 +68,9 @@ func New(name string) *Pipeline {
 	return &Pipeline{
 		name: name,
 
-		producerNodes: nil,
-		filterNodes:   nil,
-		consumerNodes: nil,
+		producerNodes:  nil,
+		processorNodes: nil,
+		consumerNodes:  nil,
 
 		multiplexer:   nil,
 		demultiplexer: nil,
@@ -87,9 +87,9 @@ func (p *Pipeline) AddProducerNode(producerNode ProducerNode) error {
 		return fmt.Errorf("can't add a nil producer node")
 	}
 
-	_, ok := producerNode.(FilterNode)
+	_, ok := producerNode.(ProcessorNode)
 	if ok {
-		return fmt.Errorf("tried to add a filter node as a producer node")
+		return fmt.Errorf("tried to add a processor node as a producer node")
 	}
 
 	producerNode.SetLogChannel(p.logChannel)
@@ -99,14 +99,14 @@ func (p *Pipeline) AddProducerNode(producerNode ProducerNode) error {
 	return nil
 }
 
-func (p *Pipeline) AddFilterNode(filterNode FilterNode) error {
-	if filterNode == nil {
-		return fmt.Errorf("can't add a nil filter node")
+func (p *Pipeline) AddProcessorNode(processorNode ProcessorNode) error {
+	if processorNode == nil {
+		return fmt.Errorf("can't add a nil processor node")
 	}
 
-	filterNode.SetLogChannel(p.logChannel)
+	processorNode.SetLogChannel(p.logChannel)
 
-	p.filterNodes = append(p.filterNodes, filterNode)
+	p.processorNodes = append(p.processorNodes, processorNode)
 
 	return nil
 }
@@ -116,9 +116,9 @@ func (p *Pipeline) AddConsumerNode(consumerNode ConsumerNode) error {
 		return fmt.Errorf("can't add a nil consumer node")
 	}
 
-	_, ok := consumerNode.(FilterNode)
+	_, ok := consumerNode.(ProcessorNode)
 	if ok {
-		return fmt.Errorf("tried to add a filter node as a consumer node")
+		return fmt.Errorf("tried to add a processor node as a consumer node")
 	}
 
 	consumerNode.SetLogChannel(p.logChannel)
@@ -153,10 +153,10 @@ func (p *Pipeline) Start() error {
 		p.multiplexer.Start(p.waitGroup)
 	}
 
-	// Start all filters.
-	for _, filterNode := range p.filterNodes {
+	// Start all processors.
+	for _, processorNode := range p.processorNodes {
 		p.waitGroup.Add(1)
-		filterNode.Start(p.waitGroup)
+		processorNode.Start(p.waitGroup)
 	}
 
 	// Start demultiplexer if we have one.
@@ -185,9 +185,9 @@ func (p *Pipeline) Stop() {
 		p.multiplexer.Stop()
 	}
 
-	// Stop all filters.
-	for _, filterNode := range p.filterNodes {
-		filterNode.Stop()
+	// Stop all processors.
+	for _, processorNode := range p.processorNodes {
+		processorNode.Stop()
 	}
 
 	// Stop demultiplexer if we have one.
@@ -216,14 +216,14 @@ func (p *Pipeline) String() string {
 
 func (p *Pipeline) Dump() {
 	fmt.Printf("\n** Pipeline %q configured with %d nodes:\n", p.name, len(p.producerNodes)+
-		len(p.filterNodes)+len(p.consumerNodes))
+		len(p.processorNodes)+len(p.consumerNodes))
 	fmt.Println("\n--- Producers  ---")
 	for _, node := range p.producerNodes {
 		stringer := node.(fmt.Stringer)
 		fmt.Println(stringer)
 	}
-	fmt.Println("\n--- Filters ---")
-	for _, node := range p.filterNodes {
+	fmt.Println("\n--- Processors ---")
+	for _, node := range p.processorNodes {
 		stringer := node.(fmt.Stringer)
 		fmt.Println(stringer)
 	}
@@ -280,16 +280,16 @@ func (p *Pipeline) connectPipeline() error {
 		lastNode = p.consumerNodes[0]
 	}
 
-	// Connect filters to the pipeline.
-	if len(p.filterNodes) > 0 {
-		for i := 0; i < len(p.filterNodes)-1; i++ {
-			currentFilterNode := p.filterNodes[i]
-			nextFilterNode := p.filterNodes[i+1]
-			currentFilterNode.SetOutputChannel(nextFilterNode.GetInputChannel())
+	// Connect processors to the pipeline.
+	if len(p.processorNodes) > 0 {
+		for i := 0; i < len(p.processorNodes)-1; i++ {
+			currentProcessorNode := p.processorNodes[i]
+			nextProcessorNode := p.processorNodes[i+1]
+			currentProcessorNode.SetOutputChannel(nextProcessorNode.GetInputChannel())
 		}
-		lastFilter := p.filterNodes[len(p.filterNodes)-1]
-		lastFilter.SetOutputChannel(lastNode.GetInputChannel())
-		lastNode = p.filterNodes[0]
+		lastProcessorNode := p.processorNodes[len(p.processorNodes)-1]
+		lastProcessorNode.SetOutputChannel(lastNode.GetInputChannel())
+		lastNode = p.processorNodes[0]
 	}
 
 	// Connect inputs to the pipeline.

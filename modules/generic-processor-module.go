@@ -7,31 +7,31 @@ import (
 	"github.com/brunoga/go-pipeliner/datatypes"
 )
 
-type GenericFilterModule struct {
+type GenericProcessorModule struct {
 	*GenericPipelineModule
 
 	inputChannel  chan *datatypes.PipelineItem
 	outputChannel chan<- *datatypes.PipelineItem
 
-	filterFunc func(*datatypes.PipelineItem) bool
+	processorFunc func(*datatypes.PipelineItem) bool
 }
 
-func NewGenericFilterModule(name, version, genericId, specificId string,
-	filterFunc func(*datatypes.PipelineItem) bool) *GenericFilterModule {
-	return &GenericFilterModule{
+func NewGenericProcessorModule(name, version, genericId, specificId string,
+	processorFunc func(*datatypes.PipelineItem) bool) *GenericProcessorModule {
+	return &GenericProcessorModule{
 		NewGenericPipelineModule(name, version, genericId, specificId,
-			"pipeliner-filter"),
+			"pipeliner-processor"),
 		make(chan *datatypes.PipelineItem),
 		nil,
-		filterFunc,
+		processorFunc,
 	}
 }
 
-func (m *GenericFilterModule) GetInputChannel() chan<- *datatypes.PipelineItem {
+func (m *GenericProcessorModule) GetInputChannel() chan<- *datatypes.PipelineItem {
 	return m.inputChannel
 }
 
-func (m *GenericFilterModule) SetOutputChannel(
+func (m *GenericProcessorModule) SetOutputChannel(
 	inputChannel chan<- *datatypes.PipelineItem) error {
 	if inputChannel == nil {
 		return fmt.Errorf("can't set output to a nil channel")
@@ -41,7 +41,7 @@ func (m *GenericFilterModule) SetOutputChannel(
 	return nil
 }
 
-func (m *GenericFilterModule) Start(waitGroup *sync.WaitGroup) error {
+func (m *GenericProcessorModule) Start(waitGroup *sync.WaitGroup) error {
 	if !m.Ready() {
 		waitGroup.Done()
 		return fmt.Errorf("not ready")
@@ -62,19 +62,19 @@ func (m *GenericFilterModule) Start(waitGroup *sync.WaitGroup) error {
 	return nil
 }
 
-func (m *GenericFilterModule) SetFilterFunc(
-	filterFunc func(*datatypes.PipelineItem) bool) {
-	m.filterFunc = filterFunc
+func (m *GenericProcessorModule) SetProcessorFunc(
+	processorFunc func(*datatypes.PipelineItem) bool) {
+	m.processorFunc = processorFunc
 }
 
-func (m *GenericFilterModule) doWork(waitGroup *sync.WaitGroup) {
+func (m *GenericProcessorModule) doWork(waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 L:
 	for {
 		select {
 		case item, ok := <-m.inputChannel:
 			if ok {
-				filtered := m.filterFunc(item)
+				filtered := m.processorFunc(item)
 				if !filtered {
 					m.outputChannel <- item
 				}
@@ -87,4 +87,3 @@ L:
 		}
 	}
 }
-
