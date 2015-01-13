@@ -22,15 +22,15 @@ type PipelinerFilterModule interface {
 	pipeline.FilterNode
 }
 
-type PipelinerOutputModule interface {
+type PipelinerConsumerModule interface {
 	// Include methods from the base module interface.
 	base_modules.Module
 
 	// include methods required by pipeline output nodes.
-	pipeline.OutputNode
+	pipeline.ConsumerNode
 }
 
-// RegisterPipelinerInputModule registers a Pipeliner producer module.
+// RegisterPipelinerProducerModule registers a Pipeliner producer module.
 func RegisterPipelinerProducerModule(module PipelinerProducerModule) error {
 	return base_modules.RegisterModule(module)
 }
@@ -40,7 +40,7 @@ func RegisterPipelinerFilterModule(module PipelinerFilterModule) error {
 	return base_modules.RegisterModule(module)
 }
 
-// RegisterPipelineroutputModule registers a Pipeliner output module.
-func RegisterPipelinerOutputModule(module PipelinerOutputModule) error {
+// RegisterPipelinerConsumerModule registers a Pipeliner consumer module.
+func RegisterPipelinerConsumerModule(module PipelinerConsumerModule) error {
 	return base_modules.RegisterModule(module)
 }

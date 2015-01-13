@@ -12,8 +12,8 @@ import (
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 )
 
-type EmailOutputModule struct {
-	*pipeliner_modules.GenericOutputModule
+type EmailConsumerModule struct {
+	*pipeliner_modules.GenericConsumerModule
 
 	authUser     string
 	authPassword string
@@ -23,9 +23,9 @@ type EmailOutputModule struct {
 	subject      string
 }
 
-func NewEmailOutputModule(specificId string) *EmailOutputModule {
-	emailOutputModule := &EmailOutputModule{
-		pipeliner_modules.NewGenericOutputModule("E-Mail Output Module",
+func NewEmailConsumerModule(specificId string) *EmailConsumerModule {
+	emailConsumerModule := &EmailConsumerModule{
+		pipeliner_modules.NewGenericConsumerModule("E-Mail Consumer Module",
 			"1.0.0", "email", specificId, nil),
 		"",
 		"",
@@ -34,12 +34,12 @@ func NewEmailOutputModule(specificId string) *EmailOutputModule {
 		"",
 		"",
 	}
-	emailOutputModule.SetConsumerFunc(emailOutputModule.sendEmail)
+	emailConsumerModule.SetConsumerFunc(emailConsumerModule.sendEmail)
 
-	return emailOutputModule
+	return emailConsumerModule
 }
 
-func (m *EmailOutputModule) Configure(params *base_modules.ParameterMap) error {
+func (m *EmailConsumerModule) Configure(params *base_modules.ParameterMap) error {
 	var ok bool
 
 	authUserParam, ok := (*params)["auth_user"]
@@ -89,20 +89,20 @@ func (m *EmailOutputModule) Configure(params *base_modules.ParameterMap) error {
 	return nil
 }
 
-func (m *EmailOutputModule) Parameters() *base_modules.ParameterMap {
+func (m *EmailConsumerModule) Parameters() *base_modules.ParameterMap {
 	return &base_modules.ParameterMap{
 		"auth_user":     "",
 		"auth_password": "",
 		"smtp_server":   "",
 		"from":          "",
 		"to":            "",
-		"subject":       "Go Pipeliner Output",
+		"subject":       "Go Pipeliner Consumer",
 	}
 }
 
-func (m *EmailOutputModule) Duplicate(specificId string) (base_modules.Module, error) {
-	duplicate := NewEmailOutputModule(specificId)
-	err := pipeliner_modules.RegisterPipelinerOutputModule(duplicate)
+func (m *EmailConsumerModule) Duplicate(specificId string) (base_modules.Module, error) {
+	duplicate := NewEmailConsumerModule(specificId)
+	err := pipeliner_modules.RegisterPipelinerConsumerModule(duplicate)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (m *EmailOutputModule) Duplicate(specificId string) (base_modules.Module, e
 	return duplicate, nil
 }
 
-func (m *EmailOutputModule) sendEmail(
+func (m *EmailConsumerModule) sendEmail(
 	consumerChannel <-chan *datatypes.PipelineItem,
 	waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
@@ -134,6 +134,6 @@ func (m *EmailOutputModule) sendEmail(
 }
 
 func init() {
-	pipeliner_modules.RegisterPipelinerOutputModule(
-		NewEmailOutputModule(""))
+	pipeliner_modules.RegisterPipelinerConsumerModule(
+		NewEmailConsumerModule(""))
 }

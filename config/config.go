@@ -10,8 +10,8 @@ import (
 	modules_base "github.com/brunoga/go-modules"
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 
+	_ "github.com/brunoga/go-pipeliner/modules/consumer"
 	_ "github.com/brunoga/go-pipeliner/modules/filter"
-	_ "github.com/brunoga/go-pipeliner/modules/output"
 	_ "github.com/brunoga/go-pipeliner/modules/producer"
 )
 
@@ -188,19 +188,19 @@ func processFilterNode(filterNode yaml.Node, pipeline *pipeline.Pipeline) error 
 	})
 }
 
-func processOutputNode(outputNode yaml.Node, pipeline *pipeline.Pipeline) error {
-	return processListOrMapNode(outputNode, true, func(node yaml.Node, key string) error {
+func processConsumerNode(consumerNode yaml.Node, pipeline *pipeline.Pipeline) error {
+	return processListOrMapNode(consumerNode, true, func(node yaml.Node, key string) error {
 		module, err := setupModule(node, key)
 		if err != nil {
 			return err
 		}
 
-		if module.Type() != "pipeliner-output" {
-			return fmt.Errorf("%s is not a pipeliner filter module",
+		if module.Type() != "pipeliner-consumer" {
+			return fmt.Errorf("%s is not a pipeliner consumer module",
 				module.GenericId())
 		}
 
-		pipeline.AddOutputNode(module.(pipeliner_modules.PipelinerOutputModule))
+		pipeline.AddConsumerNode(module.(pipeliner_modules.PipelinerConsumerModule))
 
 		return nil
 	})
@@ -249,15 +249,15 @@ func validatePipeline(pipelineNode yaml.Node, key string) (*pipeline.Pipeline, e
 		}
 	}
 
-	outputNode, err := yaml.Child(pipelineNode, ".output")
+	consumerNode, err := yaml.Child(pipelineNode, ".consumer")
 	if err != nil {
 		return nil, err
 	}
-	if outputNode == nil {
-		return nil, fmt.Errorf("Missing output field in pipeline.")
+	if consumerNode == nil {
+		return nil, fmt.Errorf("Missing consumer field in pipeline.")
 	}
 
-	err = processOutputNode(outputNode, pipeline)
+	err = processConsumerNode(consumerNode, pipeline)
 	if err != nil {
 		return nil, err
 	}

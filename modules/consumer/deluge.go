@@ -11,24 +11,24 @@ import (
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
 )
 
-type DelugeOutputModule struct {
-	*pipeliner_modules.GenericOutputModule
+type DelugeConsumerModule struct {
+	*pipeliner_modules.GenericConsumerModule
 
 	delugeClient *deluge.Deluge
 }
 
-func NewDelugeOutputModule(specificId string) *DelugeOutputModule {
-	delugeOutputModule := &DelugeOutputModule{
-		pipeliner_modules.NewGenericOutputModule("Deluge Output Module",
+func NewDelugeConsumerModule(specificId string) *DelugeConsumerModule {
+	delugeConsumerModule := &DelugeConsumerModule{
+		pipeliner_modules.NewGenericConsumerModule("Deluge Consumer Module",
 			"1.0.0", "deluge", specificId, nil),
 		nil,
 	}
-	delugeOutputModule.SetConsumerFunc(delugeOutputModule.sendItemToDeluge)
+	delugeConsumerModule.SetConsumerFunc(delugeConsumerModule.sendItemToDeluge)
 
-	return delugeOutputModule
+	return delugeConsumerModule
 }
 
-func (m *DelugeOutputModule) Configure(
+func (m *DelugeConsumerModule) Configure(
 	params *base_modules.ParameterMap) error {
 	serverParam, ok := (*params)["server"]
 	if !ok || len(serverParam) == 0 {
@@ -52,17 +52,17 @@ func (m *DelugeOutputModule) Configure(
 	return nil
 }
 
-func (m *DelugeOutputModule) Parameters() *base_modules.ParameterMap {
+func (m *DelugeConsumerModule) Parameters() *base_modules.ParameterMap {
 	return &base_modules.ParameterMap{
 		"server":   "",
 		"password": "",
 	}
 }
 
-func (m *DelugeOutputModule) Duplicate(specificId string) (base_modules.Module,
+func (m *DelugeConsumerModule) Duplicate(specificId string) (base_modules.Module,
 	error) {
-	duplicate := NewDelugeOutputModule(specificId)
-	err := pipeliner_modules.RegisterPipelinerOutputModule(duplicate)
+	duplicate := NewDelugeConsumerModule(specificId)
+	err := pipeliner_modules.RegisterPipelinerConsumerModule(duplicate)
 	if err != nil {
 		return nil, err
 	}
@@ -70,13 +70,13 @@ func (m *DelugeOutputModule) Duplicate(specificId string) (base_modules.Module,
 	return duplicate, nil
 }
 
-func (m *DelugeOutputModule) sendItemToDeluge(
+func (m *DelugeConsumerModule) sendItemToDeluge(
 	consumerChannel <-chan *datatypes.PipelineItem,
 	waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	for pipelineItem := range consumerChannel {
 		// Use first URL available.
-		// TODO(bga): Allow user to define preferred hosts or URL types 
+		// TODO(bga): Allow user to define preferred hosts or URL types
 		// (e.g. prefer magnet links).
 		torrentUrl, err := pipelineItem.GetUrl(0)
 		if err != nil {
@@ -103,6 +103,6 @@ func (m *DelugeOutputModule) sendItemToDeluge(
 }
 
 func init() {
-	pipeliner_modules.RegisterPipelinerOutputModule(
-		NewDelugeOutputModule(""))
+	pipeliner_modules.RegisterPipelinerConsumerModule(
+		NewDelugeConsumerModule(""))
 }

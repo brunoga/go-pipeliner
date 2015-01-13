@@ -14,7 +14,7 @@
       - rss:
           name: ars-technica-feed
           url: http://feeds.arstechnica.com/arstechnica/index?format=xml
-    output:
+    consumer:
       - email:
           name: email-to-myself
 #          auth_user: [login]

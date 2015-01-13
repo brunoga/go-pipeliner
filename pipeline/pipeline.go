@@ -41,7 +41,7 @@ type FilterNode interface {
 	log.Logger
 }
 
-type OutputNode interface {
+type ConsumerNode interface {
 	Starter
 	Stopper
 	InputChannelGetter
@@ -53,7 +53,7 @@ type Pipeline struct {
 
 	producerNodes []ProducerNode
 	filterNodes   []FilterNode
-	outputNodes   []OutputNode
+	consumerNodes []ConsumerNode
 
 	multiplexer   *multiplexerModule
 	demultiplexer *demultiplexerModule
@@ -70,7 +70,7 @@ func New(name string) *Pipeline {
 
 		producerNodes: nil,
 		filterNodes:   nil,
-		outputNodes:   nil,
+		consumerNodes: nil,
 
 		multiplexer:   nil,
 		demultiplexer: nil,
@@ -111,19 +111,19 @@ func (p *Pipeline) AddFilterNode(filterNode FilterNode) error {
 	return nil
 }
 
-func (p *Pipeline) AddOutputNode(outputNode OutputNode) error {
-	if outputNode == nil {
-		return fmt.Errorf("can't add a nil output node")
+func (p *Pipeline) AddConsumerNode(consumerNode ConsumerNode) error {
+	if consumerNode == nil {
+		return fmt.Errorf("can't add a nil consumer node")
 	}
 
-	_, ok := outputNode.(FilterNode)
+	_, ok := consumerNode.(FilterNode)
 	if ok {
-		return fmt.Errorf("tried to add a filter node as an output node")
+		return fmt.Errorf("tried to add a filter node as a consumer node")
 	}
 
-	outputNode.SetLogChannel(p.logChannel)
+	consumerNode.SetLogChannel(p.logChannel)
 
-	p.outputNodes = append(p.outputNodes, outputNode)
+	p.consumerNodes = append(p.consumerNodes, consumerNode)
 
 	return nil
 }
@@ -141,7 +141,7 @@ func (p *Pipeline) Start() error {
 
 	p.waitGroup = new(sync.WaitGroup)
 
-	// Start all inputs.
+	// Start all producers.
 	for _, producerNode := range p.producerNodes {
 		p.waitGroup.Add(1)
 		producerNode.Start(p.waitGroup)
@@ -165,17 +165,17 @@ func (p *Pipeline) Start() error {
 		p.demultiplexer.Start(p.waitGroup)
 	}
 
-	// Start all outputs.
-	for _, outputNode := range p.outputNodes {
+	// Start all consumers.
+	for _, consumerNode := range p.consumerNodes {
 		p.waitGroup.Add(1)
-		outputNode.Start(p.waitGroup)
+		consumerNode.Start(p.waitGroup)
 	}
 
 	return nil
 }
 
 func (p *Pipeline) Stop() {
-	// Stop all inputs.
+	// Stop all producers.
 	for _, producerNode := range p.producerNodes {
 		producerNode.Stop()
 	}
@@ -195,9 +195,9 @@ func (p *Pipeline) Stop() {
 		p.demultiplexer.Stop()
 	}
 
-	// Stop all outputs.
-	for _, outputNode := range p.outputNodes {
-		outputNode.Stop()
+	// Stop all consumers.
+	for _, consumerNode := range p.consumerNodes {
+		consumerNode.Stop()
 	}
 
 	// Stop log task.
@@ -216,7 +216,7 @@ func (p *Pipeline) String() string {
 
 func (p *Pipeline) Dump() {
 	fmt.Printf("\n** Pipeline %q configured with %d nodes:\n", p.name, len(p.producerNodes)+
-		len(p.filterNodes)+len(p.outputNodes))
+		len(p.filterNodes)+len(p.consumerNodes))
 	fmt.Println("\n--- Producers  ---")
 	for _, node := range p.producerNodes {
 		stringer := node.(fmt.Stringer)
@@ -227,8 +227,8 @@ func (p *Pipeline) Dump() {
 		stringer := node.(fmt.Stringer)
 		fmt.Println(stringer)
 	}
-	fmt.Println("\n--- Outputs ---")
-	for _, node := range p.outputNodes {
+	fmt.Println("\n--- Consumers ---")
+	for _, node := range p.consumerNodes {
 		stringer := node.(fmt.Stringer)
 		fmt.Println(stringer)
 	}
@@ -239,8 +239,8 @@ func (p *Pipeline) checkPipeline() error {
 		return fmt.Errorf("no producer nodes added to the pipeline")
 	}
 
-	if len(p.outputNodes) == 0 {
-		return fmt.Errorf("no output nodes added to the pipeline")
+	if len(p.consumerNodes) == 0 {
+		return fmt.Errorf("no consumer nodes added to the pipeline")
 	}
 
 	return nil
@@ -252,10 +252,10 @@ func (p *Pipeline) connectPipeline() error {
 		return err
 	}
 
-	var lastNode OutputNode = nil
+	var lastNode ConsumerNode = nil
 
-	// Connect outputs to the pipeline.
-	if len(p.outputNodes) > 1 {
+	// Connect consumers to the pipeline.
+	if len(p.consumerNodes) > 1 {
 		demultiplexer := base_modules.GetDefaultModuleByGenericId("demultiplexer")
 		if demultiplexer == nil {
 			return fmt.Errorf("no demultiplexer module available")
@@ -270,14 +270,14 @@ func (p *Pipeline) connectPipeline() error {
 
 		p.demultiplexer.SetLogChannel(p.logChannel)
 
-		// Connect demultiplexer to all output nodes.
-		for _, outputNode := range p.outputNodes {
-			p.demultiplexer.SetOutputChannel(outputNode.GetInputChannel())
+		// Connect demultiplexer to all consumer nodes.
+		for _, consumerNode := range p.consumerNodes {
+			p.demultiplexer.SetOutputChannel(consumerNode.GetInputChannel())
 		}
 
 		lastNode = p.demultiplexer
 	} else {
-		lastNode = p.outputNodes[0]
+		lastNode = p.consumerNodes[0]
 	}
 
 	// Connect filters to the pipeline.
