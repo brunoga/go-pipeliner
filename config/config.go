@@ -237,7 +237,10 @@ func validatePipeline(pipelineNode yaml.Node, key string) (*pipeline.Pipeline, e
 	// Filter nodes are optional.
 	filterNode, err := yaml.Child(pipelineNode, ".filter")
 	if err != nil {
-		return nil, err
+		if _, ok := err.(*yaml.NodeNotFound); !ok {
+			return nil, err
+		}
+
 	}
 	if filterNode != nil {
 		err = processFilterNode(filterNode, pipeline)
