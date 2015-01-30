@@ -3,6 +3,7 @@ package datatypes
 import (
 	"fmt"
 	"net/url"
+	"time"
 )
 
 // PayloadMap is a container for module-specific data that can be added to a
@@ -13,7 +14,11 @@ type PayloadMap map[string]interface{}
 type PipelineItem struct {
 	inputGenericId string
 
-	name string
+	name        string
+	description string
+
+	date time.Time
+
 	urls []*url.URL
 
 	payload PayloadMap
@@ -26,6 +31,8 @@ func NewPipelineItem(inputGenericId string) *PipelineItem {
 	return &PipelineItem{
 		inputGenericId,
 		"",
+		"",
+		time.Now(),
 		make([]*url.URL, 0),
 		make(PayloadMap),
 	}
@@ -77,8 +84,28 @@ func (i *PipelineItem) GetName() string {
 	return i.name
 }
 
-// AddPayload adds the given payload and associates it wit the given payloadId. 
-// It returns a nil error in case of success or a non-nil error otherwise. 
+// SetDescription sets the description for the item.
+func (i *PipelineItem) SetDescription(itemDescription string) {
+	i.description = itemDescription
+}
+
+// GetDescription returns the description for this item.
+func (i *PipelineItem) GetDescription() string {
+	return i.description
+}
+
+// SetDate sets the date for the item.
+func (i *PipelineItem) SetDate(itemDate time.Time) {
+	i.date = itemDate
+}
+
+// GetDate returns the date for this item.
+func (i *PipelineItem) GetDate() time.Time {
+	return i.date
+}
+
+// AddPayload adds the given payload and associates it with the given payloadId.
+// It returns a nil error in case of success or a non-nil error otherwise.
 func (i *PipelineItem) AddPayload(payloadId string, payload interface{}) error {
 	_, ok := i.payload[payloadId]
 	if ok {
@@ -101,9 +128,8 @@ func (i *PipelineItem) GetPayload(payloadId string) (interface{}, error) {
 	return data, nil
 }
 
-// String returns a string representation of the item. This satisfies the 
+// String returns a string representation of the item. This satisfies the
 // fmt.Stringer interface.
 func (i *PipelineItem) String() string {
-	return fmt.Sprintf("%s : %s", i.name, i.urls[0])
+	return fmt.Sprintf("%s : %s : %s : %v", i.name, i.date, i.description, i.urls)
 }
-

@@ -84,6 +84,13 @@ func readRss(genericId string, rssUrl *url.URL,
 				pipelineItem := datatypes.NewPipelineItem(
 					genericId)
 				pipelineItem.SetName(item.Title)
+				pipelineItem.SetDescription(item.Description)
+
+				itemDate, err := item.ParsedPubDate()
+				if err != nil {
+					pipelineItem.SetDate(itemDate)
+				}
+
 				for _, itemUrl := range item.Links {
 					_, err := pipelineItem.AddUrlString(
 						itemUrl.Href)

@@ -44,11 +44,13 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	} else {
+		fmt.Println("* Starting pipelines.")
+		config.Dump()
 		err := config.StartPipelines()
 		if err != nil {
 			fmt.Println(err)
 		}
 		config.WaitPipelines()
-		fmt.Println("Pipelines done.")
+		fmt.Println("* Pipelines done.")
 	}
 }

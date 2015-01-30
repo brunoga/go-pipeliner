@@ -38,6 +38,7 @@ func (m *GenericProcessorModule) SetOutputChannel(
 	}
 
 	m.outputChannel = inputChannel
+
 	return nil
 }
 
@@ -57,14 +58,25 @@ func (m *GenericProcessorModule) Start(waitGroup *sync.WaitGroup) error {
 		return fmt.Errorf("output channel not connected")
 	}
 
+	if m.processorFunc == nil {
+		waitGroup.Done()
+		return fmt.Errorf("processor function must not be nil")
+	}
+
 	go m.doWork(waitGroup)
 
 	return nil
 }
 
 func (m *GenericProcessorModule) SetProcessorFunc(
-	processorFunc func(*datatypes.PipelineItem) bool) {
+	processorFunc func(*datatypes.PipelineItem) bool) error {
+	if processorFunc == nil {
+		return fmt.Errorf("processor function must not be nil")
+	}
+
 	m.processorFunc = processorFunc
+
+	return nil
 }
 
 func (m *GenericProcessorModule) doWork(waitGroup *sync.WaitGroup) {

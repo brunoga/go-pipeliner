@@ -33,6 +33,7 @@ func (m *GenericProducerModule) SetOutputChannel(
 	}
 
 	m.outputChannel = outputChannel
+
 	return nil
 }
 
@@ -47,14 +48,25 @@ func (m *GenericProducerModule) Start(waitGroup *sync.WaitGroup) error {
 		return fmt.Errorf("output channel not connected")
 	}
 
+	if m.producerFunc == nil {
+		waitGroup.Done()
+		return fmt.Errorf("producer function must not be nil")
+	}
+
 	go m.doWork(waitGroup)
 
 	return nil
 }
 
 func (m *GenericProducerModule) SetProducerFunc(
-	producerFunc func(chan<- *datatypes.PipelineItem, <-chan struct{})) {
+	producerFunc func(chan<- *datatypes.PipelineItem, <-chan struct{})) error {
+	if producerFunc == nil {
+		return fmt.Errorf("producer function must not be nil")
+	}
+
 	m.producerFunc = producerFunc
+
+	return nil
 }
 
 func (m *GenericProducerModule) doWork(waitGroup *sync.WaitGroup) {

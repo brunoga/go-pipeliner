@@ -36,14 +36,25 @@ func (m *GenericConsumerModule) Start(waitGroup *sync.WaitGroup) error {
 		return fmt.Errorf("input channel not connected")
 	}
 
+	if m.consumerFunc == nil {
+		waitGroup.Done()
+		return fmt.Errorf("consumer function must not be nil")
+	}
+
 	go m.doWork(waitGroup)
 
 	return nil
 }
 
 func (m *GenericConsumerModule) SetConsumerFunc(
-	consumerFunc func(<-chan *datatypes.PipelineItem, *sync.WaitGroup)) {
+	consumerFunc func(<-chan *datatypes.PipelineItem, *sync.WaitGroup)) error {
+	if consumerFunc == nil {
+		return fmt.Errorf("consumer function must not be nil")
+	}
+
 	m.consumerFunc = consumerFunc
+
+	return nil
 }
 
 func (m *GenericConsumerModule) doWork(waitGroup *sync.WaitGroup) {
