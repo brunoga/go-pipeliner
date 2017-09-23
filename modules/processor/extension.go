@@ -6,8 +6,8 @@ import (
 
 	"github.com/brunoga/go-pipeliner/datatypes"
 
-	base_modules "github.com/brunoga/go-modules"
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
+	base_modules "gopkg.in/brunoga/go-modules.v1"
 )
 
 type ExtensionProcessorModule struct {

@@ -3,14 +3,14 @@ package modules
 import (
 	"github.com/brunoga/go-pipeliner/log"
 
-	base_modules "github.com/brunoga/go-modules"
+	base_modules "gopkg.in/brunoga/go-modules.v1"
 )
 
 type GenericPipelineModule struct {
 	*base_modules.GenericModule
 
-	quitChannel   chan struct{}
-	logChannel chan<- *log.LogEntry
+	quitChannel chan struct{}
+	logChannel  chan<- *log.LogEntry
 }
 
 func NewGenericPipelineModule(name, version, genericId, specificId,
@@ -38,4 +38,3 @@ func (m *GenericPipelineModule) Log(err error) {
 		m.logChannel <- log.NewLogEntry(m, err)
 	}
 }
-

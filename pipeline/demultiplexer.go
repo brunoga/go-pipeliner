@@ -7,15 +7,15 @@ import (
 	"github.com/brunoga/go-pipeliner/datatypes"
 	"github.com/brunoga/go-pipeliner/log"
 
-	base_modules "github.com/brunoga/go-modules"
+	base_modules "gopkg.in/brunoga/go-modules.v1"
 )
 
 type demultiplexerModule struct {
 	*base_modules.GenericModule
 
-	input   chan *datatypes.PipelineItem
-	outputs []chan<- *datatypes.PipelineItem
-	quit    chan struct{}
+	input      chan *datatypes.PipelineItem
+	outputs    []chan<- *datatypes.PipelineItem
+	quit       chan struct{}
 	logChannel chan<- *log.LogEntry
 }
 

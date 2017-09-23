@@ -1,12 +1,12 @@
 package log
 
 import (
-	base_modules "github.com/brunoga/go-modules"
+	base_modules "gopkg.in/brunoga/go-modules.v1"
 )
 
 type LogEntry struct {
 	Module base_modules.Module
-	Err error
+	Err    error
 }
 
 func NewLogEntry(module base_modules.Module, err error) *LogEntry {
@@ -19,4 +19,3 @@ func NewLogEntry(module base_modules.Module, err error) *LogEntry {
 type Logger interface {
 	SetLogChannel(chan<- *LogEntry)
 }
-

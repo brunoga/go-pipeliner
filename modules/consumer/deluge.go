@@ -7,8 +7,8 @@ import (
 	"github.com/brunoga/go-pipeliner/datatypes"
 
 	deluge "github.com/brunoga/go-deluge"
-	base_modules "github.com/brunoga/go-modules"
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
+	base_modules "gopkg.in/brunoga/go-modules.v1"
 )
 
 type DelugeConsumerModule struct {

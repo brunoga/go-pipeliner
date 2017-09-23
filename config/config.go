@@ -7,8 +7,8 @@ import (
 	"github.com/brunoga/go-pipeliner/pipeline"
 	"github.com/kylelemons/go-gypsy/yaml"
 
-	modules_base "github.com/brunoga/go-modules"
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
+	modules_base "gopkg.in/brunoga/go-modules.v1"
 
 	_ "github.com/brunoga/go-pipeliner/modules/consumer"
 	_ "github.com/brunoga/go-pipeliner/modules/processor"

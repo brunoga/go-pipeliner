@@ -7,7 +7,7 @@ import (
 	"github.com/brunoga/go-pipeliner/datatypes"
 	"github.com/brunoga/go-pipeliner/log"
 
-	base_modules "github.com/brunoga/go-modules"
+	base_modules "gopkg.in/brunoga/go-modules.v1"
 )
 
 type multiplexerModule struct {
@@ -16,7 +16,7 @@ type multiplexerModule struct {
 	inputChannels []<-chan *datatypes.PipelineItem
 	outputChannel chan<- *datatypes.PipelineItem
 	quitChannel   chan struct{}
-	logChannel chan<- *log.LogEntry
+	logChannel    chan<- *log.LogEntry
 }
 
 func newMultiplexerModule(specificId string) *multiplexerModule {

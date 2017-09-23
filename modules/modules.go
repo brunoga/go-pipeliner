@@ -3,7 +3,7 @@ package modules
 import (
 	"github.com/brunoga/go-pipeliner/pipeline"
 
-	base_modules "github.com/brunoga/go-modules"
+	base_modules "gopkg.in/brunoga/go-modules.v1"
 )
 
 type PipelinerProducerModule interface {

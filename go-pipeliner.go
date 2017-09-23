@@ -7,7 +7,7 @@ import (
 
 	"github.com/brunoga/go-pipeliner/config"
 
-	modules "github.com/brunoga/go-modules"
+	modules "gopkg.in/brunoga/go-modules.v1"
 )
 
 var configFile = flag.String("config", "./config.yaml", "path to config file")
