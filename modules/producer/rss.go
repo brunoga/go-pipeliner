@@ -5,9 +5,9 @@ import (
 	"net/url"
 
 	"github.com/brunoga/go-pipeliner/datatypes"
+	"github.com/mmcdole/gofeed"
 
 	pipeliner_modules "github.com/brunoga/go-pipeliner/modules"
-	rss "github.com/jteeuwen/go-pkg-rss"
 	base_modules "gopkg.in/brunoga/go-modules.v1"
 )
 
@@ -23,7 +23,7 @@ func NewRssProducerModule(specificId string) *RssProducerModule {
 			"1.0.0", "rss", specificId, nil),
 		nil,
 	}
-	rssProducerModule.SetProducerFunc(rssProducerModule.setupReadRss)
+	rssProducerModule.SetProducerFunc(rssProducerModule.readRss)
 
 	return rssProducerModule
 }
@@ -65,53 +65,35 @@ func (m *RssProducerModule) Duplicate(specificId string) (base_modules.Module,
 	return duplicate, nil
 }
 
-func (m *RssProducerModule) setupReadRss(
+func (m *RssProducerModule) readRss(
 	producerChannel chan<- *datatypes.PipelineItem,
 	producerControlChannel <-chan struct{}) {
 	defer close(producerChannel)
 
-	readRss(m.GenericId(), m.rssUrl, producerChannel,
-		producerControlChannel)
-}
+	fp := gofeed.NewParser()
+	feed, err := fp.ParseURL(m.rssUrl.String())
+	if err != nil {
+		// TODO(bga): Handle errors.
+		return
+	}
 
-func readRss(genericId string, rssUrl *url.URL,
-	producerChannel chan<- *datatypes.PipelineItem,
-	producerControlChannel <-chan struct{}) {
-	feed := rss.New(5, true, nil,
-		func(feed *rss.Feed, ch *rss.Channel, newItems []*rss.Item) {
-		L:
-			for _, item := range newItems {
-				pipelineItem := datatypes.NewPipelineItem(
-					genericId)
-				pipelineItem.SetName(item.Title)
-				pipelineItem.SetDescription(item.Description)
-
-				itemDate, err := item.ParsedPubDate()
-				if err != nil {
-					pipelineItem.SetDate(itemDate)
-				}
-
-				for _, itemUrl := range item.Links {
-					_, err := pipelineItem.AddUrlString(
-						itemUrl.Href)
-					if err != nil {
-						// TODO(bga): Log error.
-						continue
-					}
-				}
-				pipelineItem.AddPayload("rss", item)
-
-				select {
-				case _, ok := <-producerControlChannel:
-					if !ok {
-						break L
-					}
-				case producerChannel <- pipelineItem:
-					// Do nothing.
-				}
+	for _, item := range feed.Items {
+		pipelineItem := datatypes.NewPipelineItem(m.GenericId())
+		pipelineItem.SetName(item.Title)
+		pipelineItem.SetDescription(item.Description)
+		pipelineItem.SetDate(*item.PublishedParsed)
+		pipelineItem.AddUrlString(item.Link)
+		pipelineItem.AddPayload("rss", item)
+		select {
+		case _, ok := <-producerControlChannel:
+			if !ok {
+				break
 			}
-		})
-	feed.Fetch(rssUrl.String(), nil)
+		case producerChannel <- pipelineItem:
+			// Do nothing.
+		}
+
+	}
 }
 
 func init() {
